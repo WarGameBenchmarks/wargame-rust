@@ -495,7 +495,7 @@ fn multi(tasks: uint) {
 
 		if  (current_time - last_time) > 50000000 {
 			last_time = current_time;
-			backprint(format!("{}. et = {}s, r = {} ms/g; s = {} g/ms; total = {} \t \t ", phase, elasped_time / NS, rate / MS as f64, speed_v, total_games));
+			backprint(format!("{}. et = {}s, r = {} ms/g; s = {} g/ms; total = {}\t", phase, elasped_time / NS, rate / MS as f64, speed_v, total_games));
 		}
 
 	}
