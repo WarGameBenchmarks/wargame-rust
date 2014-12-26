@@ -379,7 +379,7 @@ fn multi(tasks: uint) {
 
 		// this starts the task,
 		// which may or may not be a thread
-		Thread::spawn(move || {
+		let thread_handle = Thread::spawn(move || {
 			let task_id = i;
 
 			// infinitely loop the games,
@@ -406,7 +406,10 @@ fn multi(tasks: uint) {
 			}
 			// send the termination signal
 			ttx.send(1);
-		}).detach();
+		});
+
+		thread_handle.detach();
+
 	}
 
 	let mut phase = 1u;
@@ -417,8 +420,6 @@ fn multi(tasks: uint) {
 	let mut test_duration = 0f64;
 
 	// 1 minute in nanoseconds
-	// let prime_time = 500000000;
-	// let prime_time = 10000000000;
 	let prime_time = 60000000000;
 	let maximum_tests = 100u;
 	let percent_variation = 0.0001f64;
@@ -497,7 +498,8 @@ fn multi(tasks: uint) {
 
 		if  (current_time - last_time) > 50000000 {
 			last_time = current_time;
-			backprint(format!("{}. et = {}s, r = {} ms/g; s = {} g/ms; total = {}\t", phase, elasped_time / NS, rate / MS as f64, speed_v, total_games));
+			backprint(format!("{}. et = {}s, r = {} ms/g; s = {} g/ms; total = {}\t",
+			 phase, elasped_time / NS, rate / MS as f64, speed_v, total_games));
 		}
 
 	}
