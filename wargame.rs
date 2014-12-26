@@ -6,6 +6,7 @@ use std::fmt;
 use time::precise_time_ns;
 use std::rand::{task_rng, Rng};
 use std::io;
+use std::thread::Thread;
 
 #[deriving(Clone)]
 enum Value {
@@ -378,7 +379,7 @@ fn multi(tasks: uint) {
 
 		// this starts the task,
 		// which may or may not be a thread
-		spawn(move || {
+		Thread::spawn(move || {
 			let task_id = i;
 
 			// infinitely loop the games,
@@ -405,7 +406,7 @@ fn multi(tasks: uint) {
 			}
 			// send the termination signal
 			ttx.send(1);
-		});			
+		}).detach();
 	}
 
 	let mut phase = 1u;
