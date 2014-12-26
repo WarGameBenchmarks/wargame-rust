@@ -380,16 +380,13 @@ fn multi(tasks: uint) {
 		// which may or may not be a thread
 		spawn(move || {
 			let task_id = i;
-			let mut iterations = 0;
 
 			// infinitely loop the games,
 			// second back the iteration count
 			loop {
 
 				game(); // simulation of game
-				iterations = iterations + 1;
-
-				tx.send(iterations);
+				tx.send(1);
 				
 
 				let result = crx.try_recv();
@@ -448,11 +445,15 @@ fn multi(tasks: uint) {
 	println!("\n{}. prime time has begun", phase); phase = 2;
 	'monitor: loop {
 		
-		// the sum of all the tasks should be found here
-		total_games = 0;
+		/*
+			Query each counter
+		*/
 		for i in range(0, tasks) {
-			let received = completion_receivers[i].recv() as u64;
-			total_games = total_games + received;
+			let received = match completion_receivers[i].try_recv() {
+				Ok(x) => x,
+				Err(_) => 0
+			};
+			total_games = total_games + received as u64;
 		}
 
 		// time calculations
