@@ -1,0 +1,5 @@
+[package]
+
+name = "wargame"
+version = "0.0.1"
+authors = ["Ryan Rampersad <ryan.rampersad@gmail.com>"]
