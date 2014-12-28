@@ -8,15 +8,17 @@ The WarGame is a tiny kinda-sorta benchmark - and as such, it should not be take
 How To
 ------
 
-Unlike the Java version, this version uses a single optional flag:
 
 ```
 ./wargame [number of threads]
 ```
+If the number of threads are not specified, the default is a single thread. No other configurations are available at this time.
 
-If the number of threads are not specified, the default is a single thread.
+If you download this repository and have *cargo* installed, to compile and run this:
 
-No other configurations are available at this time.
+```
+cargo run
+```
 
 Sample Output
 ------
