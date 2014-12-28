@@ -8,16 +8,26 @@ The WarGame is a tiny kinda-sorta benchmark - and as such, it should not be take
 How To
 ------
 
+With the executable directly:
 
 ```
 ./wargame [number of threads]
 ```
-If the number of threads are not specified, the default is a single thread. No other configurations are available at this time.
-
-If you download this repository and have *cargo* installed, to compile and run this:
 
 ```
-cargo run
+./game
+```
+
+If the number of threads are not specified, the default is a single thread. No other configurations are available at this time.
+
+Using [Cargo](https://crates.io/):
+
+```
+cargo run --bin wargame [number of threads]
+```
+
+```
+cargo run --bin game
 ```
 
 Sample Output
