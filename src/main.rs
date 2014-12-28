@@ -184,7 +184,7 @@ fn monitor(tasks: uint) {
 	// show results
 	println!("Speed: {}", speed_v);
 	println!("Total Games: {}", total_games);
-	println!("Elasped Time: {} nanoseconds; {} seconds", elasped_time, elasped_time / NS);
+	println!("Elapsed Time: {} nanoseconds; {} seconds", elasped_time, elasped_time / NS);
 	println!("Score: {}", std::num::Float::round(speed_v));
 
 
