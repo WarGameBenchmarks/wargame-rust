@@ -87,6 +87,7 @@ fn monitor(tasks: uint) {
 	let mut test_time = 0u64;
 
 	let mut speed = 0f64;
+	let mut speed_v = 0f64;
 	let mut rate = 0f64;
 
 	let mut rate_low = 0f64;
@@ -121,7 +122,7 @@ fn monitor(tasks: uint) {
 
 		// GAMES per NANOSECOND
 		speed = 1f64 / rate as f64;
-		let speed_v = speed * MS as f64;
+		speed_v = speed * MS as f64;
 
 		// the priming phase
 		if !test_started && elasped_time >= prime_time {
@@ -159,8 +160,7 @@ fn monitor(tasks: uint) {
 			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms; t = {}; \t",
 			 phase, elasped_time / NS, total_games, speed_v, format!("{} @ {}s", tests, test_duration)));
 		}
-			// rate / MS as f64
-			//
+
 		}
 
 	}
@@ -181,6 +181,11 @@ fn monitor(tasks: uint) {
 		}
 	}
 
+	// show results
+	println!("Speed: {}", speed_v);
+	println!("Total Games: {}", total_games);
+	println!("Elasped Time: {} nanoseconds; {} seconds", elasped_time, elasped_time / NS);
+	println!("Score: {}", std::num::Float::round(speed_v));
 
 
 }
