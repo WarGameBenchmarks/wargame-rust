@@ -138,7 +138,7 @@ fn monitor(tasks: uint) {
 				break 'monitor;
 			} else {
 				// calculate the details for the next testing phase
-				test_duration = speed_v + 1f64;
+				test_duration = std::num::Float::ceil(speed_v) + 1f64;
 				test_time = elasped_time + (test_duration * NS as f64) as u64;
 				
 				percent_rate = rate * percent_variation;
@@ -152,9 +152,13 @@ fn monitor(tasks: uint) {
 
 		if  (current_time - last_time) > 50000000 {
 			last_time = current_time;
-			let tail: String;
-			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms; t = {} tests; \t",
-			 phase, elasped_time / NS, total_games, speed_v, tests));
+			if phase == 1 {
+			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms;\t",
+			 phase, elasped_time / NS, total_games, speed_v));
+		} else {
+			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms; t = {}; \t",
+			 phase, elasped_time / NS, total_games, speed_v, format!("{} @ {}s", tests, test_duration)));
+		}
 			// rate / MS as f64
 			//
 		}
@@ -176,6 +180,7 @@ fn monitor(tasks: uint) {
 			break 'end;
 		}
 	}
+
 
 
 }
