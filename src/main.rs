@@ -97,7 +97,7 @@ fn monitor(tasks: uint) {
 
 	// the monitor loop collects the total game count
 	// and the elasped time so far
-	println!("\n{}. prime time has begun", phase); phase = 2;
+	println!("\n{}. prime time has begun", phase);
 	'monitor: loop {
 		
 		/*
@@ -126,14 +126,15 @@ fn monitor(tasks: uint) {
 		// the priming phase
 		if !test_started && elasped_time >= prime_time {
 			test_started = true;
-			phase = 3;
-			println!("\n{}. prime time has is over", phase);
-			phase = 4;
+			println!("\n{}. prime time has has ended", phase);
+			phase = 2;
+			println!("\n{}. stability testing has begun", phase);
 		} else if test_started && elasped_time >= test_time {
 
 			// testing phase
 			if rate_low < rate && rate < rate_high || tests >= maximum_tests {
 				// end the monitor infinite loop
+				println!("\n{}. stability testing has ended", phase);
 				break 'monitor;
 			} else {
 				// calculate the details for the next testing phase
@@ -151,8 +152,11 @@ fn monitor(tasks: uint) {
 
 		if  (current_time - last_time) > 50000000 {
 			last_time = current_time;
-			wg::backprint(format!("{}. et = {}s, r = {} ms/g; s = {} g/ms; total = {}\t",
-			 phase, elasped_time / NS, rate / MS as f64, speed_v, total_games));
+			let tail: String;
+			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms; t = {} tests; \t",
+			 phase, elasped_time / NS, total_games, speed_v, tests));
+			// rate / MS as f64
+			//
 		}
 
 	}
@@ -167,7 +171,7 @@ fn monitor(tasks: uint) {
 			end_collection = end_collection + termination_receivers[i].recv();
 		}
 		if end_collection == tasks {
-			phase = 5;
+			phase = 3;
 			println!("\n{}. {} tasks stopped", phase, end_collection);
 			break 'end;
 		}
