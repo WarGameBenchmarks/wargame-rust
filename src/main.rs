@@ -76,13 +76,14 @@ fn monitor(tasks: uint) {
 	let prime_time = 60000000000;
 	let maximum_tests = 100u;
 	let percent_variation = 0.0001f64;
+	let display_frequency = 50000000u64;
 
-	let MS = 1000000u64;
-	let NS = 1000000000u64;
+	let ms = 1000000u64;
+	let ns = 1000000000u64;
 
 	let mut tests = 0;
 
-	let mut elasped_time = 0;
+	let mut elapsed_time = 0;
 	let mut last_time = 0u64;
 	let mut test_time = 0u64;
 
@@ -114,23 +115,23 @@ fn monitor(tasks: uint) {
 
 		// time calculations
 		current_time = precise_time_ns();
-		elasped_time = current_time - start_time;
+		elapsed_time = current_time - start_time;
 
 		
 		// NANOSECONDS per GAME
-		rate = elasped_time as f64 / total_games as f64;
+		rate = elapsed_time as f64 / total_games as f64;
 
 		// GAMES per NANOSECOND
 		speed = 1f64 / rate as f64;
-		speed_v = speed * MS as f64;
+		speed_v = speed * ms as f64;
 
 		// the priming phase
-		if !test_started && elasped_time >= prime_time {
+		if !test_started && elapsed_time >= prime_time {
 			test_started = true;
 			println!("\n{}. prime time has has ended", phase);
 			phase = 2;
 			println!("\n{}. stability testing has begun", phase);
-		} else if test_started && elasped_time >= test_time {
+		} else if test_started && elapsed_time >= test_time {
 
 			// testing phase
 			if rate_low < rate && rate < rate_high || tests >= maximum_tests {
@@ -139,8 +140,10 @@ fn monitor(tasks: uint) {
 				break 'monitor;
 			} else {
 				// calculate the details for the next testing phase
-				test_duration = std::num::Float::ceil(speed_v) + 1f64;
-				test_time = elasped_time + (test_duration * NS as f64) as u64;
+				
+				// ceil does not need the +1 because 0..1 will always yeild 1
+				test_duration = std::num::Float::ceil(speed_v);
+				test_time = elapsed_time + (test_duration * ns as f64) as u64;
 				
 				percent_rate = rate * percent_variation;
 
@@ -151,14 +154,18 @@ fn monitor(tasks: uint) {
 
 		}
 
-		if  (current_time - last_time) > 50000000 {
+		/*
+			If the time between prints is .5s, print out an updated string.
+		*/
+		if  (current_time - last_time) > display_frequency {
 			last_time = current_time;
 			if phase == 1 {
-			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms;\t",
-			 phase, elasped_time / NS, total_games, speed_v));
-		} else {
-			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms; t = {}; \t",
-			 phase, elasped_time / NS, total_games, speed_v, format!("{} @ {}s", tests, test_duration)));
+				wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms;\t", 
+					phase, elapsed_time / ns, total_games, speed_v));
+			} 
+		else {
+			wg::backprint(format!("{}. et = {}s; g = {}; s = {} g/ms; t = {}; \t", 
+				phase, elapsed_time / ns, total_games, speed_v, format!("{} @ {}s", tests, test_duration)));
 		}
 
 		}
@@ -184,18 +191,19 @@ fn monitor(tasks: uint) {
 	// show results
 	println!("Speed: {}", speed_v);
 	println!("Total Games: {}", total_games);
-	println!("Elasped Time: {} nanoseconds; {} seconds", elasped_time, elasped_time / NS);
+	println!("Elapsed Time: {} nanoseconds; {} seconds", elapsed_time, elapsed_time / ns);
 	println!("Score: {}", std::num::Float::round(speed_v));
 
 
 }
 
-// view the source code on this gist
-// https://gist.github.com/ryanmr/46097dc63c1ccf833f52
+
 fn main() {
 
+	/*
+		Grab the optional cli argument.
+	*/
 	let args = os::args();
-
 	let tasks:uint = match args.len() {
 		2 => match args[1].as_slice().trim().parse() {
 			Some(x) => x,
