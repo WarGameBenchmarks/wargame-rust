@@ -1,9 +1,9 @@
-extern crate log;
 
 use std::fmt;
-use std::rand::{task_rng, Rng};
-
-
+use std::thread;
+use std::rand;
+use std::rand::Rng;
+use std::rand::ThreadRng;
 
 #[deriving(Clone)]
 enum Value {
@@ -181,7 +181,7 @@ impl Deck {
 	fn shuffle(&mut self) {
 		let &Deck(ref mut cards) = self;
 		
-		let mut rng = task_rng();
+		let mut rng = rand::thread_rng();
 		rng.shuffle(cards.as_mut_slice());
 
 	}
@@ -206,17 +206,34 @@ impl Deck {
 	}
 
 	/*
-		Remove the card from the top of the deck.
+		Removes card from the top of this deck and gives the card to the given deck.
 	*/
 	fn give_card(&mut self, deck: &mut Deck) -> () {
 		let &Deck(ref mut cards) = self;
 		let &Deck(ref mut cards2) = deck;
 
-		let card:Card = match cards.remove(0) {
-			None => return (),
-			Some(c) => c
-		};
-		cards2.push(card)
+		// let card:Card = match cards.remove(0) {
+		// 	None => return (),
+		// 	Some(c) => c
+		// };
+
+		if cards.len() == 0 {
+			return ();
+		}
+
+		let card = cards.remove(0);
+		cards2.push(card);
+		
+	}
+
+	/*
+		Gives card from this deck to the given deck.
+	*/
+	fn give_cards(&mut self, deck: &mut Deck) -> () {
+		self.shuffle();
+		for _ in range(0, self.length()) {
+			self.give_card(deck);
+		}		
 	}
 
 }
@@ -250,14 +267,14 @@ pub fn game() {
 
 	let mut turns = 0u;
 
+	let mut winner:Deck = Deck::new();
+
 	'base: while player1.has_cards() && player2.has_cards() {
 		turns = turns + 1;
 
-		// log(format!("Turn #{}", turns));
+		//debug!(format!("Turn #{}", turns));
 
-		// log(format!("P1 {}; P2 {}", player1.length(), player2.length()));
-
-		let mut winner:Deck = Deck::new();
+		//debug!(format!("P1 {}; P2 {}", player1.length(), player2.length()));
 
 		let mut card1:Card = player1.get_card();
 		let mut card2:Card = player2.get_card();
@@ -265,7 +282,7 @@ pub fn game() {
 		player1.give_card(&mut winner);
 		player2.give_card(&mut winner);
 
-		// log(format!("P1: {}; P2: {}", card1, card2));
+		//debug!(format!("P1: {}; P2: {}", card1, card2));
 
 		if card1 == card2 {
 
@@ -273,14 +290,14 @@ pub fn game() {
 
 			'war: while {
 
-				// log(format!("P1: {} = P2: {}", card1, card2));
+				//debug!(format!("P1: {} = P2: {}", card1, card2));
 
 				if player1.length() < 4 || player2.length() < 4 {
-					// log(format!("Not enough cards for war!"));
+					//debug!(format!("Not enough cards for war!"));
 					break 'base;
 				}
 				wars = wars + 1;
-				// log(format!("War #{}", wars));
+				//debug!(format!("War #{}", wars));
 
 				// each player provides 3 cards to the winner
 				for _ in range(0, 3u) {
@@ -297,17 +314,11 @@ pub fn game() {
 				player2.give_card(&mut winner);
 
 				if card1 < card2 {
-					// log(format!("P1: {} < P2: {}; W {}", card1, card2, winner.length()));
-					winner.shuffle();
-					for _ in range(0, winner.length()) {
-						winner.give_card(&mut player2);
-					}					
+					//debug!(format!("P1: {} < P2: {}; W {}", card1, card2, winner.length()));
+					winner.give_cards(&mut player2);
 				} else if card1 > card2 {
-					// log(format!("P1: {} > P2: {}; W {}", card1, card2, winner.length()));
-					winner.shuffle();
-					for _ in range(0, winner.length()) {
-						winner.give_card(&mut player1);
-					}				
+					//debug!(format!("P1: {} > P2: {}; W {}", card1, card2, winner.length()));
+					winner.give_cards(&mut player1);
 				} else {
 					// perform another war
 					// the cards are equal
@@ -319,19 +330,19 @@ pub fn game() {
 				card1 == card2
 			} {}
 			
-			// log(format!("War has ended"));
+			//debug!(format!("War has ended"));
 
 		} else if card1 < card2 {
-			// log(format!("P1: {} < P2: {}; W {}", card1, card2, winner.length()));
+			//debug!(format!("P1: {} < P2: {}; W {}", card1, card2, winner.length()));
 			winner.shuffle();
 			for _ in range(0, winner.length()) {
-				winner.give_card(&mut player2);
+				winner.give_cards(&mut player2);
 			}
 		} else if card1 > card2 {
-			// log(format!("P1: {} > P2: {}; W {}", card1, card2, winner.length()));
+			//debug!(format!("P1: {} > P2: {}; W {}", card1, card2, winner.length()));
 			winner.shuffle();
 			for _ in range(0, winner.length()) {
-				winner.give_card(&mut player1);
+				winner.give_cards(&mut player1);
 			}
 		}
 		
@@ -339,8 +350,8 @@ pub fn game() {
 	}
 
 
-	// log(format!("Total turns: {}", turns));
-	// log(format!("P1: {}; P2: {}", player1.length(), player2.length()));
+	//debug!(format!("Total turns: {}", turns));
+	//debug!(format!("P1: {}; P2: {}", player1.length(), player2.length()));
 
 }
 

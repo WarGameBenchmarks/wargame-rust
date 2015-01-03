@@ -1,12 +1,11 @@
-
 extern crate time;
 
 use std::os;
 use std::fmt;
-use std::rand::{task_rng, Rng};
 use time::precise_time_ns;
 use std::io;
 use std::thread::Thread;
+use std::thread::JoinGuard;
 
 pub mod wg;
 
@@ -17,6 +16,8 @@ fn monitor(tasks: uint) {
 	let mut terminate_senders = Vec::<Sender<uint>>::new();
 	let mut termination_receivers = Vec::<Receiver<uint>>::new();
 	let mut completion_receivers = Vec::<Receiver<uint>>::new();
+
+	let mut threads = Vec::<&mut JoinGuard<uint>>::new();
 
 	for i in range(0, tasks) {
 
@@ -36,7 +37,7 @@ fn monitor(tasks: uint) {
 			let task_id = i;
 
 			// infinitely loop the games,
-			// second back the iteration count
+			// send back the iteration count
 			loop {
 
 				wg::game(); // simulation of game
@@ -61,6 +62,8 @@ fn monitor(tasks: uint) {
 			ttx.send(1);
 		});
 
+		// threads.push(&mut thread_handle);
+		// threads[i].detach();
 		thread_handle.detach();
 
 	}
@@ -187,6 +190,9 @@ fn monitor(tasks: uint) {
 			break 'end;
 		}
 	}
+	// for i in range(0, tasks) {
+	// 	threads[i].join();
+	// }
 
 	// show results
 	println!("Speed: {}", speed_v);
