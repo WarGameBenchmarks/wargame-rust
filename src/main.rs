@@ -4,36 +4,37 @@ use std::os;
 use std::fmt;
 use time::precise_time_ns;
 use std::io;
+use std::sync::mpsc;
+use std::sync::mpsc::Sender;
+use std::sync::mpsc::Receiver;
 use std::thread::Thread;
 use std::thread::JoinGuard;
 
 pub mod wg;
 
-fn monitor(tasks: uint) {
+fn monitor(tasks: usize) {
 	// how many tasks should we run
 	// i.e. the level of concurrency
 
-	let mut terminate_senders = Vec::<Sender<uint>>::new();
-	let mut termination_receivers = Vec::<Receiver<uint>>::new();
-	let mut completion_receivers = Vec::<Receiver<uint>>::new();
-
-	let mut threads = Vec::<&mut JoinGuard<uint>>::new();
+	let mut terminate_senders = Vec::<Sender<u32>>::new();
+	let mut termination_receivers = Vec::<Receiver<u32>>::new();
+	let mut completion_receivers = Vec::<Receiver<u32>>::new();
 
 	for i in range(0, tasks) {
 
 		// bind various channel ends to the arrays above
 		// or into the closure of proc() below for
 		// each task's use
-		let (tx, rx): (Sender<uint>, Receiver<uint>) = channel();
-		let (ctx, crx): (Sender<uint>, Receiver<uint>) = channel();
-		let (ttx, trx): (Sender<uint>, Receiver<uint>) = channel();
+		let (tx, rx): (Sender<u32>, Receiver<u32>) = mpsc::channel();
+		let (ctx, crx): (Sender<u32>, Receiver<u32>) = mpsc::channel();
+		let (ttx, trx): (Sender<u32>, Receiver<u32>) = mpsc::channel();
 		terminate_senders.push(ctx);
 		termination_receivers.push(trx);
 		completion_receivers.push(rx);
 
 		// this starts the task,
 		// which may or may not be a thread
-		let thread_handle = Thread::spawn(move || {
+		Thread::spawn(move || {
 			let task_id = i;
 
 			// infinitely loop the games,
@@ -61,10 +62,6 @@ fn monitor(tasks: uint) {
 			// send the termination signal
 			ttx.send(1);
 		});
-
-		// threads.push(&mut thread_handle);
-		// threads[i].detach();
-		thread_handle.detach();
 
 	}
 
@@ -179,10 +176,14 @@ fn monitor(tasks: uint) {
 	for i in range(0, tasks) {
 		terminate_senders[i].send(1);
 	}
-	let mut end_collection = 0u;
+	let mut end_collection:usize = 0;
 	'end:loop {
 		for i in range(0, tasks) {
-			end_collection = end_collection + termination_receivers[i].recv();
+			let recv_value: usize = match termination_receivers[i].recv() {
+				Ok(x) => 1,
+				Err(_) => 0
+			};
+			end_collection = end_collection + recv_value;
 		}
 		if end_collection == tasks {
 			phase = 3;
@@ -210,7 +211,7 @@ fn main() {
 		Grab the optional cli argument.
 	*/
 	let args = os::args();
-	let tasks:uint = match args.len() {
+	let tasks:usize = match args.len() {
 		2 => match args[1].as_slice().trim().parse() {
 			Some(x) => x,
 			None => 1
