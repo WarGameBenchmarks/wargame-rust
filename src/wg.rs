@@ -4,8 +4,9 @@ use std::thread;
 use std::rand;
 use std::rand::Rng;
 use std::rand::ThreadRng;
+use std::cmp::Ordering;
 
-#[deriving(Clone)]
+#[derive(Clone)]
 enum Value {
 	Two,
 	Three,
@@ -22,7 +23,7 @@ enum Value {
 	Ace
 }
 
-impl fmt::Show for Value {
+impl fmt::String for Value {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		let name = match *self {
 			Value::Two => "2",
@@ -43,7 +44,7 @@ impl fmt::Show for Value {
 	}
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 enum Suit {
 	Clubs,
 	Hearts,
@@ -51,7 +52,7 @@ enum Suit {
 	Spades
 }
 
-impl fmt::Show for Suit {
+impl fmt::String for Suit {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		let name = match *self {
 			Suit::Clubs => "Clubs",
@@ -63,7 +64,7 @@ impl fmt::Show for Suit {
 	}
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct Card {
 	value: Value,
 	suit: Suit
@@ -74,8 +75,8 @@ impl Card {
 		Card {value: value, suit: suit}
 	}
 
-	fn get_value(&self) -> uint {
-		let v:uint = match self.value {
+	fn get_value(&self) -> u32 {
+		let v:u32 = match self.value {
 			Value::Two => 2,
 			Value::Three => 3,
 			Value::Four => 4,
@@ -94,7 +95,7 @@ impl Card {
 	}
 }
 
-impl fmt::Show for Card {
+impl fmt::String for Card {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "{} of {}", self.value, self.suit)
 	}
@@ -112,7 +113,7 @@ impl PartialEq for Card {
 }
 impl PartialOrd for Card {
     fn lt(&self, other: &Card) -> bool {
-        match self.cmp(other) { Less => true, _ => false}
+        match self.cmp(other) { Ordering::Less => true, _ => false}
     }
     fn partial_cmp(&self, other: &Card) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -123,13 +124,13 @@ impl Ord for Card {
 	fn cmp(&self, other: &Card) -> Ordering {
 		let v1 = self.get_value();
 		let v2 = other.get_value();
-		if v1 < v2 {return Less;}
-		if v1 > v2 {return Greater;}
-		return Equal;
+		if v1 < v2 {return Ordering::Less;}
+		if v1 > v2 {return Ordering::Greater;}
+		return Ordering::Equal;
 	}
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct Deck(Vec<Card>);
 
 impl Deck {
@@ -150,7 +151,7 @@ impl Deck {
 			].iter() {
 				cards.push(Card::new(value.clone(), suit.clone()));
 			}
-		}	
+		}
 		Deck(cards)
 	}
 
@@ -160,9 +161,9 @@ impl Deck {
 	}
 
 	fn split(&mut self) -> Deck {
-		let &Deck(ref mut cards) = self;
+		let &mut Deck(ref mut cards) = self;
 		let length = cards.len();
-		let half = length / 2u;
+		let half = length / 2;
 
 		// a vector(52) for awaiting cards
 		let mut _cards:Vec<Card> = Vec::with_capacity(52);
@@ -179,29 +180,29 @@ impl Deck {
 	}
 
 	fn shuffle(&mut self) {
-		let &Deck(ref mut cards) = self;
+		let &mut Deck(ref mut cards) = self;
 		
 		let mut rng = rand::thread_rng();
 		rng.shuffle(cards.as_mut_slice());
 
 	}
 
-	fn length(&mut self) -> uint {
-		let &Deck(ref mut cards) = self;
+	fn length(&mut self) -> usize {
+		let &mut Deck(ref mut cards) = self;
 
 		return cards.len()
 	}
 
 	fn has_cards(&mut self) -> bool {
-		let &Deck(ref mut cards) = self;
-		cards.len() > 0u
+		let &mut Deck(ref mut cards) = self;
+		cards.len() > 0
 	}
 
 	/*
 		Get the card at the top of the deck.
 	*/
 	fn get_card(&mut self) -> Card {
-		let &Deck(ref mut cards) = self;
+		let &mut Deck(ref mut cards) = self;
 		cards[0].clone()
 	}
 
@@ -209,8 +210,8 @@ impl Deck {
 		Removes card from the top of this deck and gives the card to the given deck.
 	*/
 	fn give_card(&mut self, deck: &mut Deck) -> () {
-		let &Deck(ref mut cards) = self;
-		let &Deck(ref mut cards2) = deck;
+		let &mut Deck(ref mut cards) = self;
+		let &mut Deck(ref mut cards2) = deck;
 
 		// let card:Card = match cards.remove(0) {
 		// 	None => return (),
@@ -265,7 +266,7 @@ pub fn game() {
 
 	let mut player2 = player1.split();
 
-	let mut turns = 0u;
+	let mut turns = 0;
 
 	let mut winner:Deck = Deck::new();
 
@@ -286,7 +287,7 @@ pub fn game() {
 
 		if card1 == card2 {
 
-			let mut wars = 0u;
+			let mut wars = 0;
 
 			'war: while {
 
@@ -300,7 +301,7 @@ pub fn game() {
 				//debug!(format!("War #{}", wars));
 
 				// each player provides 3 cards to the winner
-				for _ in range(0, 3u) {
+				for _ in range(0, 3) {
 					player1.give_card(&mut winner);
 					player2.give_card(&mut winner);
 				}

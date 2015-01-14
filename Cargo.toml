@@ -3,3 +3,6 @@
 name = "wargame"
 version = "0.0.1"
 authors = ["Ryan Rampersad <ryan.rampersad@gmail.com>"]
+
+[dependencies.time]
+git = "https://github.com/rust-lang/time"
