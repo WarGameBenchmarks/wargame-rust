@@ -8,3 +8,4 @@ authors = ["Ryan Rampersad <ryan.rampersad@gmail.com"]
 rand = "0.3"
 log = "0.3"
 env_logger = "*"
+time = "0.1"

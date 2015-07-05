@@ -5,6 +5,11 @@ This is the follow up to the long developed original [WarGame written in Java](h
 
 The WarGame is a tiny kinda-sorta benchmark - and as such, it should not be taken too seriously.
 
+Changelog
+---------
+
+There is a changelog detailing major changes between releases. See [changelog.md](changelog.md).
+
 How To
 ------
 
@@ -14,21 +19,21 @@ With the executable directly:
 ./wargame [number of threads]
 ```
 
-```
-./game
-```
-
 If the number of threads are not specified, the default is a single thread. No other configurations are available at this time.
 
 Using [Cargo](https://crates.io/):
 
 ```
-cargo run --bin wargame [number of threads]
+cargo run [number of threads]
 ```
 
+You should use *Cargo* to compile the WarGame.
+
 ```
-cargo run --bin game
+cargo build --release
 ```
+
+This will provide the best possible results.
 
 Sample Output
 ------
