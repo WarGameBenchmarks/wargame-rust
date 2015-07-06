@@ -1,12 +1,7 @@
-
-use std::fmt;
-
 use std::f64;
 
 use time::precise_time_ns;
 
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::sync::mpsc::Receiver;
@@ -44,7 +39,7 @@ pub fn benchmark(tasks: usize) {
 
             loop {
                 wg::game();
-                c_tx.send(1);
+                let _ = c_tx.send(1);
 
 
                 let r = ts_rx.try_recv();
@@ -55,7 +50,7 @@ pub fn benchmark(tasks: usize) {
                 
             }
 
-            tr_tx.send(1);
+            let _ = tr_tx.send(task_id as u32);
 
         });
 
@@ -68,7 +63,7 @@ pub fn benchmark(tasks: usize) {
 
     let mut total_games = 0u64;
     let start_time = precise_time_ns();
-    let mut current_time = precise_time_ns();
+    let mut current_time;
     let mut test_duration = 0f64;
 
     // 1 minute in nanoseconds
@@ -82,17 +77,17 @@ pub fn benchmark(tasks: usize) {
 
     let mut tests = 0;
 
-    let mut elapsed_time = 0;
+    let mut elapsed_time;
     let mut last_time = 0u64;
     let mut test_time = 0u64;
 
-    let mut speed = 0f64;
-    let mut speed_v = 0f64;
-    let mut rate = 0f64;
+    let mut speed:f64;
+    let mut speed_v:f64;
+    let mut rate:f64;
 
     let mut rate_low = 0f64;
     let mut rate_high = 0f64;
-    let mut percent_rate = 0f64;
+    let mut percent_rate:f64;
 
     let mut test_started = false;
 
@@ -107,7 +102,7 @@ pub fn benchmark(tasks: usize) {
         for i in 0..tasks {
             let received = match completion_receivers[i].try_recv() {
                 Ok(x) => x,
-                Err(_) => 0
+                Err(_) => 00
             };
             total_games = total_games + received as u64;
         }
@@ -141,7 +136,7 @@ pub fn benchmark(tasks: usize) {
                 // calculate the details for the next testing phase
                 
                 // ceil does not need the +1 because 0..1 will always yeild 1
-                test_duration = f64::ceil(speed_v);
+                test_duration = f64::ceil(f64::sqrt(speed_v));
                 test_time = elapsed_time + (test_duration * ns as f64) as u64;
                 
                 percent_rate = rate * percent_variation;
@@ -191,13 +186,13 @@ pub fn benchmark(tasks: usize) {
     // TODO: split the thread cleanup into its own method
     
     for i in 0..tasks {
-        terminate_senders[i].send(1);
+        let _ = terminate_senders[i].send(1);
     }
     let mut end_collection:usize = 0;
     'end:loop {
         for i in 0..tasks {
             let recv_value: usize = match termination_receivers[i].recv() {
-                Ok(x) => 1,
+                Ok(_) => 1,
                 Err(_) => 0
             };
             end_collection = end_collection + recv_value;

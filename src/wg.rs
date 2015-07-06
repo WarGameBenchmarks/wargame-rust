@@ -153,7 +153,7 @@ impl Deck {
 	}
 
 	fn new() -> Deck {
-		let mut cards:Vec<Card> = Vec::with_capacity(52);
+		let cards:Vec<Card> = Vec::with_capacity(52);
 		Deck(cards)
 	}
 
