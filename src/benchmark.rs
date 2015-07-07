@@ -66,13 +66,12 @@ pub fn benchmark(tasks: usize) {
     let mut total_games = 0u64;
     let start_time = precise_time_ns();
     let mut current_time;
-    let mut test_duration = 0f64;
+    let mut test_duration:f64;
 
     // 1 minute in nanoseconds
     // let prime_time = 60000000000;
     let prime_time = 60000000000;
     let maximum_tests = 240u32;
-    let percent_variation = 0.0001f64;
 
     let display_frequency = 50000000u64;
     let sample_frequency =   5000000u64;
@@ -92,14 +91,9 @@ pub fn benchmark(tasks: usize) {
     let mut speed_v:f64;
     let mut rate:f64;
 
-    let mut rate_low = 0f64;
-    let mut rate_high = 0f64;
-    let mut percent_rate:f64;
-
     let mut test_started = false;
 
     let mut maximum_speed_v:f64 = 0f64;
-    let mut minimum_speed_v:f64 = f64::MAX;
 
     let mut mean;
     let mut stdev;
@@ -116,7 +110,7 @@ pub fn benchmark(tasks: usize) {
         for i in 0..tasks {
             let received = match completion_receivers[i].try_recv() {
                 Ok(x) => x,
-                Err(_) => 00
+                Err(_) => 0
             };
             total_games = total_games + received as u64;
         }
@@ -135,9 +129,6 @@ pub fn benchmark(tasks: usize) {
 
         if maximum_speed_v < speed_v {
             maximum_speed_v = speed_v;
-        }
-        if minimum_speed_v > speed_v && speed_v >= 0f64 {
-            minimum_speed_v = speed_v;
         }
 
         // the priming phase
@@ -200,7 +191,7 @@ pub fn benchmark(tasks: usize) {
             //         )
             //     );
             backprint(
-                    format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; cov = {cov:.5}; \t",
+                    format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; v = {cov:.2}%; \t",
                         phase,
                         elapsed_time / ns,
                         total_games,
