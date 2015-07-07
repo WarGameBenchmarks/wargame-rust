@@ -59,7 +59,7 @@ pub fn benchmark(tasks: usize) {
 
     // TODO: split the calculations into its own method
 
-    let mut samples = Vec::with_capacity(100);
+    let mut samples = Vec::with_capacity(10000);
 
     let mut phase = 1u32;
 
@@ -70,12 +70,12 @@ pub fn benchmark(tasks: usize) {
 
     // 1 minute in nanoseconds
     // let prime_time = 60000000000;
-    let prime_time = 15000000000;
-    let maximum_tests = 100u32;
+    let prime_time = 60000000000;
+    let maximum_tests = 240u32;
     let percent_variation = 0.0001f64;
 
     let display_frequency = 50000000u64;
-    let sample_frequency = 10000000u64;
+    let sample_frequency =   5000000u64;
 
     let mut last_display_time = 0u64;
     let mut last_sample_time = 0u64;
@@ -97,6 +97,9 @@ pub fn benchmark(tasks: usize) {
     let mut percent_rate:f64;
 
     let mut test_started = false;
+
+    let mut maximum_speed_v:f64 = 0f64;
+    let mut minimum_speed_v:f64 = f64::MAX;
 
     let mut mean;
     let mut stdev;
@@ -130,28 +133,36 @@ pub fn benchmark(tasks: usize) {
         speed = 1f64 / rate as f64;
         speed_v = speed * ms as f64;
 
+        if maximum_speed_v < speed_v {
+            maximum_speed_v = speed_v;
+        }
+        if minimum_speed_v > speed_v && speed_v >= 0f64 {
+            minimum_speed_v = speed_v;
+        }
 
         // the priming phase
         if !test_started && elapsed_time >= prime_time {
+
             test_started = true;
             println!("\n{}. prime time has has ended", phase);
             phase = 2;
             println!("\n{}. stability testing has started", phase);
+
         } else if test_started && elapsed_time >= test_time {
 
             mean = get_mean(&samples);
             stdev = get_standard_deviation(&samples, mean);
             cov = get_coefficient_of_variation(mean, stdev);
 
-           if cov <= 1f64 || tests >= maximum_tests {
+            if cov <= 1f64 || tests >= maximum_tests {
                println!("\n{}. stability testing has ended", phase);
                break 'monitor;
-           } else {
+            } else {
                test_duration = 1f64;
                test_time = elapsed_time + (test_duration * ns as f64) as u64;
-           }
+            }
 
-           tests = tests + 1;
+            tests = tests + 1;
         }
 
         if (current_time - last_sample_time) > sample_frequency {
@@ -189,12 +200,13 @@ pub fn benchmark(tasks: usize) {
             //         )
             //     );
             backprint(
-                    format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; cov = {cov:.5}; \t",
+                    format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; cov = {cov:.5}; \t",
                         phase,
                         elapsed_time / ns,
                         total_games,
                         sv=speed_v,
-                        cov = cov
+                        t = tests,
+                        cov = (1f64/cov)*100 as f64
                     )
                 );
         }
@@ -241,22 +253,15 @@ pub fn benchmark(tasks: usize) {
 
     println!("Coefficient of Variation: {}%", coefficient_of_variation);
 
-    let standard_error = get_standard_error(&samples, mean);
-
-    println!("Standard Error: {}", standard_error);
-
-
     println!("\n\n\t\t----\n");
     println!("Threads: {}", tasks);
+    println!("Minimum Speed: {sv:}", sv = minimum_speed_v);
+    println!("Maximum Speed: {sv:.5}", sv = maximum_speed_v);
     println!("Speed: {sv:.5}", sv = speed_v);
     println!("Total Games: {}", total_games);
     println!("Elapsed Time: {} nanoseconds; {} seconds", elapsed_time, elapsed_time / ns);
     println!("Score: {}", f64::round(speed_v));
 
-}
-
-fn get_standard_error(samples: &[f64], mean: f64) -> f64 {
-    return mean / (samples.len() as f64).sqrt();
 }
 
 fn get_coefficient_of_variation(mean: f64, stdev: f64) -> f64 {
