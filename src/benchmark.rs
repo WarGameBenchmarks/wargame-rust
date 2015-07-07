@@ -246,7 +246,6 @@ pub fn benchmark(tasks: usize) {
 
     println!("\n\n\t\t----\n");
     println!("Threads: {}", tasks);
-    println!("Minimum Speed: {sv:}", sv = minimum_speed_v);
     println!("Maximum Speed: {sv:.5}", sv = maximum_speed_v);
     println!("Speed: {sv:.5}", sv = speed_v);
     println!("Total Games: {}", total_games);
