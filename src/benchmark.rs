@@ -10,18 +10,7 @@ use std::thread;
 
 use wg;
 
-fn backprint(s: String) {
-    print!("\r{}", s);
-}
-
-pub fn benchmark(tasks: usize) {
-
-    let mut terminate_senders = Vec::<Sender<u32>>::new(); // ts_
-    let mut termination_receivers = Vec::<Receiver<u32>>::new(); // tr_
-    let mut completion_receivers = Vec::<Receiver<u32>>::new(); // c_
-
-
-    // TODO: split the thread creation into its own method
+fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
 
     for i in 0..tasks {
 
@@ -29,14 +18,18 @@ pub fn benchmark(tasks: usize) {
         let (ts_tx, ts_rx): (Sender<u32>, Receiver<u32>) = channel();
         let (tr_tx, tr_rx): (Sender<u32>, Receiver<u32>) = channel();
 
-        terminate_senders.push(ts_tx);
-        termination_receivers.push(tr_rx);
-        completion_receivers.push(c_rx);
+        ts.push(ts_tx);
+        tr.push(tr_rx);
+        c.push(c_rx);
 
         thread::spawn(move || {
-
             let task_id = i;
 
+            // tight loop
+            // wargame runs
+            // completion gets incremented
+            // then the termination signal is checked, and if is available, loop is broken
+            // the termination success signal is sent
             loop {
                 wg::game();
                 let _ = c_tx.send(1);
@@ -49,13 +42,21 @@ pub fn benchmark(tasks: usize) {
                 }
 
             }
-
             let _ = tr_tx.send(task_id as u32);
-
         });
-
-
     }
+}
+
+pub fn benchmark(tasks: usize) {
+
+    let mut terminate_senders = Vec::<Sender<u32>>::new(); // ts_
+    let mut termination_receivers = Vec::<Receiver<u32>>::new(); // tr_
+    let mut completion_receivers = Vec::<Receiver<u32>>::new(); // c_
+
+
+    // TODO: split the thread creation into its own method
+
+    create_threads(tasks, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
 
     // TODO: split the calculations into its own method
 
@@ -69,7 +70,6 @@ pub fn benchmark(tasks: usize) {
     let mut test_duration:f64;
 
     // 1 minute in nanoseconds
-    // let prime_time = 60000000000;
     let prime_time = 60000000000;
     let maximum_tests = 240u32;
 
@@ -107,13 +107,15 @@ pub fn benchmark(tasks: usize) {
         /*
             Query each counter
         */
-        for i in 0..tasks {
-            let received = match completion_receivers[i].try_recv() {
-                Ok(x) => x,
-                Err(_) => 0
-            };
-            total_games = total_games + received as u64;
-        }
+        // for i in 0..tasks {
+        //     let received = match completion_receivers[i].try_recv() {
+        //         Ok(x) => x,
+        //         Err(_) => 0
+        //     };
+        //     total_games = total_games + received as u64;
+        // }
+
+        total_games = total_games + get_games(&completion_receivers);
 
         // time calculations
         current_time = precise_time_ns();
@@ -131,42 +133,44 @@ pub fn benchmark(tasks: usize) {
             maximum_speed_v = speed_v;
         }
 
-        // the priming phase
         if !test_started && elapsed_time >= prime_time {
-
+            // phase 1: priming phase
             test_started = true;
             println!("\n{}. prime time has has ended", phase);
             phase = 2;
             println!("\n{}. stability testing has started", phase);
-
         } else if test_started && elapsed_time >= test_time {
-
+            // phase 2: stability phase
+            // calculate statistics
             mean = get_mean(&samples);
             stdev = get_standard_deviation(&samples, mean);
             cov = get_coefficient_of_variation(mean, stdev);
-
+            // cov is a ratio
+            // when cov <= 1, stdev is ~1% of the mean
             if cov <= 1f64 || tests >= maximum_tests {
-               println!("\n{}. stability testing has ended", phase);
-               break 'monitor;
+                println!("\n{}. stability testing has ended", phase);
+                break 'monitor;
             } else {
-               test_duration = 1f64;
-               test_time = elapsed_time + (test_duration * ns as f64) as u64;
+                // each test has 1 second duration
+                test_duration = 1f64;
+                test_time = elapsed_time + (test_duration * ns as f64) as u64;
             }
-
             tests = tests + 1;
         }
 
+        // sample: save a sample of the current speed_v
         if (current_time - last_sample_time) > sample_frequency {
             last_sample_time = current_time;
             samples.push(speed_v);
         }
 
-        /*
-            If the time between prints is .5s, print out an updated string.
-        */
+        // display: update the display enough time has elapsed
         if  (current_time - last_display_time) > display_frequency {
+
             last_display_time = current_time;
+
             if phase == 1 {
+                // during phase 1
                 backprint(
                         format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms;\t",
                             phase,
@@ -176,82 +180,88 @@ pub fn benchmark(tasks: usize) {
                         )
                     );
             }
-        else {
-            // backprint(
-            //         format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; \t",
-            //             phase,
-            //             elapsed_time / ns,
-            //             total_games,
-            //             sv=speed_v,
-            //             t = format!(
-            //                 "{} @ {}s",
-            //                     tests,
-            //                     test_duration
-            //                 )
-            //         )
-            //     );
-            backprint(
-                    format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; v = {cov:.2}%; \t",
-                        phase,
-                        elapsed_time / ns,
-                        total_games,
-                        sv=speed_v,
-                        t = tests,
-                        cov = (1f64/cov)*100 as f64
-                    )
-                );
-        }
+            else {
+                // during phase 2
+                backprint(
+                        format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; v = {cov:.2}%; \t",
+                            phase,
+                            elapsed_time / ns,
+                            total_games,
+                            sv=speed_v,
+                            t = tests,
+                            cov = (1f64/cov)*100 as f64
+                        )
+                    );
+            }
 
         }
 
     }
 
-    // TODO: split the thread cleanup into its own method
 
-    for i in 0..tasks {
-        let _ = terminate_senders[i].send(1);
-    }
-    let mut end_collection:usize = 0;
-    'end:loop {
-        for i in 0..tasks {
-            let recv_value: usize = match termination_receivers[i].recv() {
-                Ok(_) => 1,
-                Err(_) => 0
-            };
-            end_collection = end_collection + recv_value;
-        }
-        if end_collection == tasks {
-            phase = 3;
-            println!("\n{}. {} tasks stopped", phase, end_collection);
-            break 'end;
-        }
-    }
+    let threads_stopped = stop_threads(tasks, &mut phase, &mut terminate_senders, &mut termination_receivers);
+    println!("\n{}. {} tasks stopped", phase, threads_stopped);
 
-    // show results
-    println!("\n\n\t\t----\n");
-
-
+    // calculate final statistics
     let mean = get_mean(&samples);
-
-    println!("Samples: {} collected", samples.len());
-    println!("Mean: {}", mean);
-
     let stdev = get_standard_deviation(&samples, mean);
-
-    println!("Standard Deviation: {}", stdev);
-
     let coefficient_of_variation = get_coefficient_of_variation(mean, stdev);
 
-    println!("Coefficient of Variation: {}%", coefficient_of_variation);
+    // show results
+    println!("\n---\n");
 
-    println!("\n\n\t\t----\n");
-    println!("Threads: {}", tasks);
+    println!("Samples: {} collected", samples.len());
+    println!("Mean: {mean:.5}", mean = mean);
+    println!("Standard Deviation: {stdev:.5}", stdev = stdev);
+    println!("Coefficient of Variation: {cov:.5}", cov = coefficient_of_variation);
+    println!("Coefficient of Variation: {cov:.2}%", cov = ((1f64/cov)*100 as f64));
     println!("Maximum Speed: {sv:.5}", sv = maximum_speed_v);
+
+    println!("\n---\n");
+
+    println!("Threads: {}", tasks);
     println!("Speed: {sv:.5}", sv = speed_v);
     println!("Total Games: {}", total_games);
     println!("Elapsed Time: {} nanoseconds; {} seconds", elapsed_time, elapsed_time / ns);
-    println!("Score: {}", f64::round(speed_v));
 
+    println!("\nScore: {}\n", f64::round(speed_v));
+}
+
+fn stop_threads(tasks: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>) -> usize {
+    for s in ts.iter() {
+        let _ = s.send(1);
+    }
+    let mut end_collection:usize = 0;
+    'end:loop {
+        for r in tr.iter() {
+            let rv: usize = match r.recv() {
+                Ok(_) => 1,
+                Err(_) => 0
+            };
+            end_collection = end_collection + rv;
+        }
+        if end_collection == tasks {
+            *phase = 3wa   a a a;
+            break 'end;
+        }
+    }
+    return end_collection;
+}
+
+fn backprint(s: String) {
+    print!("\r{}", s);
+}
+
+fn get_games(crx: &[Receiver<u32>]) -> u64 {
+    let mut total = 0;
+    for i in crx.iter() {
+        let r = match i.try_recv() {
+            Ok(x) => x,
+            Err(_) => 0
+        };
+        total = total + r as u64;
+    }
+    return total;
 }
 
 fn get_coefficient_of_variation(mean: f64, stdev: f64) -> f64 {
@@ -260,8 +270,8 @@ fn get_coefficient_of_variation(mean: f64, stdev: f64) -> f64 {
 
 fn get_standard_deviation(samples: &[f64], mean: f64) -> f64 {
     let mut total_stdev = 0f64;
-    for i in 0..samples.len() {
-        total_stdev = total_stdev + (samples[i] - mean).powi(2);
+    for s in samples.iter() {
+        total_stdev = total_stdev + (s - mean).powi(2);
     }
     let stdev = (total_stdev / samples.len() as f64).sqrt();
     return stdev;
@@ -269,8 +279,8 @@ fn get_standard_deviation(samples: &[f64], mean: f64) -> f64 {
 
 fn get_mean(samples: &[f64]) -> f64 {
     let mut total_mean:f64 = 0f64;
-    for i in 0..samples.len() {
-        total_mean = total_mean + samples[i];
+    for s in samples.iter() {
+        total_mean = total_mean + s;
     }
     let mean = total_mean / samples.len() as f64;
     return mean;
