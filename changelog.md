@@ -1,7 +1,7 @@
 Changelog
 =========
 
-V 0.2.0
+v0.2.0 - July 7th, 2015 
 -------
 
 Major refactoring due to language changes.
@@ -26,7 +26,7 @@ Major refactoring due to language changes.
 - Cleaned up spacing and overall code
 
 
-V 0.1.0
+v0.1.0 - December 2014
 -------
 
 Honestly, that was six months ago. Who knows.
