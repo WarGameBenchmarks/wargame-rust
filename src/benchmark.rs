@@ -10,58 +10,25 @@ use std::thread;
 
 use wg;
 
-fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
-
-    for i in 0..tasks {
-
-        let (c_tx, c_rx): (Sender<u32>, Receiver<u32>) = channel();
-        let (ts_tx, ts_rx): (Sender<u32>, Receiver<u32>) = channel();
-        let (tr_tx, tr_rx): (Sender<u32>, Receiver<u32>) = channel();
-
-        ts.push(ts_tx);
-        tr.push(tr_rx);
-        c.push(c_rx);
-
-        thread::spawn(move || {
-            let task_id = i;
-
-            // tight loop
-            // wargame runs
-            // completion gets incremented
-            // then the termination signal is checked, and if is available, loop is broken
-            // the termination success signal is sent
-            loop {
-                wg::game();
-                let _ = c_tx.send(1);
-
-
-                let r = ts_rx.try_recv();
-                match r {
-                    Ok(r) => {if r == 1 {break;}}
-                    Err(_) => {}
-                }
-
-            }
-            let _ = tr_tx.send(task_id as u32);
-        });
-    }
-}
-
 pub fn benchmark(tasks: usize) {
 
     let mut terminate_senders = Vec::<Sender<u32>>::new(); // ts_
     let mut termination_receivers = Vec::<Receiver<u32>>::new(); // tr_
     let mut completion_receivers = Vec::<Receiver<u32>>::new(); // c_
 
-
-    // TODO: split the thread creation into its own method
-
+    // create threads, and store channel pipes in the respective vectors
     create_threads(tasks, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
 
-    // TODO: split the calculations into its own method
+    // it is easier to keep data for calculations here
+    // otherwise they would need to passed by reference
+    // into the next function
 
+    // calculations
+
+    // samples used for statistics calculations
     let mut samples = Vec::with_capacity(10000);
 
+    // phase of benchmark
     let mut phase = 1u32;
 
     let mut total_games = 0u64;
@@ -104,16 +71,6 @@ pub fn benchmark(tasks: usize) {
     println!("\n{}. prime time has started", phase);
     'monitor: loop {
 
-        /*
-            Query each counter
-        */
-        // for i in 0..tasks {
-        //     let received = match completion_receivers[i].try_recv() {
-        //         Ok(x) => x,
-        //         Err(_) => 0
-        //     };
-        //     total_games = total_games + received as u64;
-        // }
 
         total_games = total_games + get_games(&completion_receivers);
 
@@ -225,6 +182,43 @@ pub fn benchmark(tasks: usize) {
     println!("Elapsed Time: {} nanoseconds; {} seconds", elapsed_time, elapsed_time / ns);
 
     println!("\nScore: {}\n", f64::round(speed_v));
+}
+
+fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
+
+    for i in 0..tasks {
+
+        let (c_tx, c_rx): (Sender<u32>, Receiver<u32>) = channel();
+        let (ts_tx, ts_rx): (Sender<u32>, Receiver<u32>) = channel();
+        let (tr_tx, tr_rx): (Sender<u32>, Receiver<u32>) = channel();
+
+        ts.push(ts_tx);
+        tr.push(tr_rx);
+        c.push(c_rx);
+
+        thread::spawn(move || {
+            let task_id = i;
+
+            // tight loop
+            // wargame runs
+            // completion gets incremented
+            // then the termination signal is checked, and if is available, loop is broken
+            // the termination success signal is sent
+            loop {
+                wg::game();
+                let _ = c_tx.send(1);
+
+
+                let r = ts_rx.try_recv();
+                match r {
+                    Ok(r) => {if r == 1 {break;}}
+                    Err(_) => {}
+                }
+
+            }
+            let _ = tr_tx.send(task_id as u32);
+        });
+    }
 }
 
 fn stop_threads(tasks: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>) -> usize {
