@@ -1,7 +1,7 @@
 Changelog
 =========
 
-V 0.2.0
+v0.2.0 - July 7th, 2015 
 -------
 
 Major refactoring due to language changes.
@@ -20,9 +20,13 @@ Major refactoring due to language changes.
 - Added 5-decimal numeric precision to `speed_v`
 - Reorganized most `use` statements in the file headers
 - Swapped *begun* with *started* because English is difficult
+- Moved various helper sections into their own functions
+- Added statistical functions
+- Added documentation
+- Cleaned up spacing and overall code
 
 
-V 0.1.0
+v0.1.0 - December 2014
 -------
 
 Honestly, that was six months ago. Who knows.

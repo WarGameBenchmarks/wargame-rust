@@ -1,5 +1,3 @@
-
-
 use std::fmt;
 use rand;
 use rand::Rng;
@@ -322,8 +320,6 @@ pub fn game() {
 				card1 == card2
 			} {}
 
-			//info!(target: "game_events", ("War has ended"));
-
 		} else if card1 < card2 {
 			info!(target: "game_events", "P1: `{}` < P2: `{}`; W {}", card1, card2, winner.length());
 			winner.shuffle();
@@ -341,8 +337,6 @@ pub fn game() {
 
 	}
 
-
 	info!(target: "game_events", "Total turns: {}", turns);
 	info!(target: "game_events", "P1: {}; P2: {}; W {}", player1.length(), player2.length(), winner.length());
-
 }
