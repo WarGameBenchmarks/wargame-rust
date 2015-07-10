@@ -19,18 +19,16 @@ With the executable directly:
 ./wargame [number of threads]
 ```
 
-If the number of threads are not specified, the default is a single thread. No other configurations are available at this time.
+If the number of threads are not specified, the default is a single thread. No other configurations are available.
 
-Using [Cargo](https://crates.io/):
-
-```
-cargo run [number of threads]
-```
-
-You should use *Cargo* to compile the WarGame.
+You should use [Cargo](https://crates.io/) to compile the WarGame in Rust if you do not have a binary executable already.
 
 ```
 cargo build --release
+```
+
+```
+cargo run --release [number of threads]
 ```
 
 This will provide the best possible results.
@@ -39,16 +37,37 @@ Sample Output
 ------
 
 ```
-ryan@server:~/wargame-rust$ ./wargame 8
+ryan@argon ~/Desktop/wargame-rust/wargame-rust
+$ cargo run --release 8
+     Running `target\release\wargame.exe 8`
+
 settings: tasks = 8
 
-1. prime time has begun
-1. et = 59s; g = 538191; s = 8.977047 g/ms;
+1. prime time has started
+1. et = 59s; g = 6417097; s = 106.95935 g/ms;
 1. prime time has has ended
 
-2. stability testing has begun
-2. et = 210s; g = 1882052; s = 8.959508 g/ms; t = 15 @ 10s;
+2. stability testing has started
+2. et = 80s; g = 8576345; s = 107.07182 g/ms; t = 20; v = 99.72%;
 2. stability testing has ended
 
 3. 8 tasks stopped
+
+---
+
+Samples: 13114 collected
+Mean: 106.88683
+Standard Deviation: 1.06521
+Coefficient of Variation: 0.99657
+Coefficient of Variation: 100.34%
+Maximum Speed: 107.86164
+
+---
+
+Threads: 8
+Speed: 107.07158
+Total Games: 8576911
+Elapsed Time: 80104456039 nanoseconds; 80 seconds
+
+Score: 107
 ```
