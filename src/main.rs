@@ -28,7 +28,4 @@ fn main() {
 	println!("settings: tasks = {}", tasks);
 
 	benchmark::benchmark(tasks);
-
-
-
 }
