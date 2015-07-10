@@ -231,7 +231,7 @@ fn stop_threads(tasks: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &m
             end_collection = end_collection + rv;
         }
         if end_collection == tasks {
-            *phase = 3wa   a a a;
+            *phase = 3;
             break 'end;
         }
     }
