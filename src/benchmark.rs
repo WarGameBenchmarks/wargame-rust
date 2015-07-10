@@ -198,24 +198,20 @@ fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver
 
         thread::spawn(move || {
             let task_id = i;
-
             // tight loop
-            // wargame runs
-            // completion gets incremented
-            // then the termination signal is checked, and if is available, loop is broken
-            // the termination success signal is sent
             loop {
+                // the entire point of this: run the wargame
                 wg::game();
+                // completion gets incremented
                 let _ = c_tx.send(1);
-
-
+                // then the termination signal is checked, and if is available, loop is broken
                 let r = ts_rx.try_recv();
                 match r {
                     Ok(r) => {if r == 1 {break;}}
                     Err(_) => {}
                 }
-
             }
+            // the termination success signal is sent
             let _ = tr_tx.send(task_id as u32);
         });
     }
