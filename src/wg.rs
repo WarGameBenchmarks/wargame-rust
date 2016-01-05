@@ -1,5 +1,4 @@
 use std::fmt;
-use rand;
 use rand::Rng;
 use rand::ThreadRng;
 use std::cmp::Ordering;

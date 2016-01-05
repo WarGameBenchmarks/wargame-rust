@@ -9,7 +9,6 @@ use std::sync::mpsc::Receiver;
 use std::thread;
 
 use rand;
-use rand::ThreadRng;
 
 use wg;
 
