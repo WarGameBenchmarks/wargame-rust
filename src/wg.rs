@@ -1,6 +1,7 @@
 use std::fmt;
 use rand;
 use rand::Rng;
+use rand::ThreadRng;
 use std::cmp::Ordering;
 
 #[derive(Clone, Copy)]
@@ -174,10 +175,10 @@ impl Deck {
 		Deck(_cards)
 	}
 
-	fn shuffle(&mut self) {
+	fn shuffle(&mut self, rng: &mut ThreadRng) {
 		let &mut Deck(ref mut cards) = self;
 
-		let mut rng = rand::thread_rng();
+		// let mut rng = rand::thread_rng();
 		rng.shuffle(cards);
 
 	}
@@ -246,11 +247,11 @@ impl fmt::Display for Deck {
 	}
 }
 
-pub fn game() {
+pub fn game(rng: &mut ThreadRng) {
 
 	let mut player1 = Deck::new_fresh_deck();
 
-	player1.shuffle();
+	player1.shuffle(rng);
 
 	let mut player2 = player1.split();
 
@@ -304,9 +305,11 @@ pub fn game() {
 
 				if card1 < card2 {
 					info!(target: "game_events", "P1: `{}` < P2: `{}`; W {}", card1, card2, winner.length());
+					winner.shuffle(rng);
 					winner.give_cards(&mut player2);
 				} else if card1 > card2 {
 					info!(target: "game_events", "P1: `{}` > P2: `{}`; W {}", card1, card2, winner.length());
+					winner.shuffle(rng);
 					winner.give_cards(&mut player1);
 				} else {
 					// perform another war
@@ -321,11 +324,11 @@ pub fn game() {
 
 		} else if card1 < card2 {
 			info!(target: "game_events", "P1: `{}` < P2: `{}`; W {}", card1, card2, winner.length());
-			winner.shuffle();
+			winner.shuffle(rng);
 			winner.give_cards(&mut player2);
 		} else if card1 > card2 {
 			info!(target: "game_events", "P1: `{}` > P2: `{}`; W {}", card1, card2, winner.length());
-			winner.shuffle();
+			winner.shuffle(rng);
 			winner.give_cards(&mut player1);
 		}
 

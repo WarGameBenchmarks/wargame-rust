@@ -8,6 +8,9 @@ use std::sync::mpsc::Receiver;
 
 use std::thread;
 
+use rand;
+use rand::ThreadRng;
+
 use wg;
 
 pub fn benchmark(tasks: usize) {
@@ -199,9 +202,12 @@ fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver
         thread::spawn(move || {
             let task_id = i;
             // tight loop
+
+            let mut rng = rand::thread_rng();
+
             loop {
                 // the entire point of this: run the wargame
-                wg::game();
+                wg::game(&mut rng);
                 // completion gets incremented
                 let _ = c_tx.send(1);
                 // then the termination signal is checked, and if is available, loop is broken
