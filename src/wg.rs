@@ -221,7 +221,6 @@ impl Deck {
 		Gives card from this deck to the given deck.
 	*/
 	fn give_cards(&mut self, deck: &mut Deck) -> () {
-		self.shuffle();
 		for _ in 0..self.length() {
 			self.give_card(deck);
 		}
@@ -323,15 +322,11 @@ pub fn game() {
 		} else if card1 < card2 {
 			info!(target: "game_events", "P1: `{}` < P2: `{}`; W {}", card1, card2, winner.length());
 			winner.shuffle();
-			for _ in 0..winner.length() {
-				winner.give_cards(&mut player2);
-			}
+			winner.give_cards(&mut player2);
 		} else if card1 > card2 {
 			info!(target: "game_events", "P1: `{}` > P2: `{}`; W {}", card1, card2, winner.length());
 			winner.shuffle();
-			for _ in 0..winner.length() {
-				winner.give_cards(&mut player1);
-			}
+			winner.give_cards(&mut player1);
 		}
 
 
