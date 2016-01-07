@@ -2,7 +2,7 @@
 
 name = "wargame-rust"
 version = "0.3.0"
-authors = ["Ryan Rampersad <ryan.rampersad@gmail.com"]
+authors = ["Ryan Rampersad <ryan.rampersad@gmail.com>"]
 
 [dependencies]
 rand = "0.3"
