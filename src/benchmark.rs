@@ -12,20 +12,20 @@ use rand;
 
 use wg;
 
-pub fn benchmark(tasks: usize) {
+const MS:u64 = 1000000;
+const NS:u64 = 1000000000;
 
+pub fn benchmark(threads: usize) {
+
+    // these communication channels
     let mut terminate_senders = Vec::<Sender<u32>>::new(); // ts_
     let mut termination_receivers = Vec::<Receiver<u32>>::new(); // tr_
     let mut completion_receivers = Vec::<Receiver<u32>>::new(); // c_
 
     // create threads, and store channel pipes in the respective vectors
-    create_threads(tasks, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
+    create_threads(threads, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
 
-    // it is easier to keep data for calculations here
-    // otherwise they would need to passed by reference
-    // into the next function
-
-    // calculations
+    
 
     // samples used for statistics calculations
     let mut samples = Vec::with_capacity(10000);
@@ -47,9 +47,6 @@ pub fn benchmark(tasks: usize) {
 
     let mut last_display_time = 0u64;
     let mut last_sample_time = 0u64;
-
-    let ms = 1000000u64;
-    let ns = 1000000000u64;
 
     let mut tests = 0;
 
@@ -86,7 +83,7 @@ pub fn benchmark(tasks: usize) {
 
         // GAMES per NANOSECOND
         speed = 1f64 / rate as f64;
-        speed_v = speed * ms as f64;
+        speed_v = speed * MS as f64;
 
         if maximum_speed_v < speed_v {
             maximum_speed_v = speed_v;
@@ -112,7 +109,7 @@ pub fn benchmark(tasks: usize) {
             } else {
                 // each test has 1 second duration
                 test_duration = 1f64;
-                test_time = elapsed_time + (test_duration * ns as f64) as u64;
+                test_time = elapsed_time + (test_duration * NS as f64) as u64;
             }
             tests = tests + 1;
         }
@@ -131,9 +128,9 @@ pub fn benchmark(tasks: usize) {
             if phase == 1 {
                 // during phase 1
                 backprint(
-                        format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms;\t",
+                        format!("{}. et = {}s; g = {}; s = {sv:.5} g/MS;\t",
                             phase,
-                            elapsed_time / ns,
+                            elapsed_time / NS,
                             total_games,
                             sv=speed_v
                         )
@@ -142,9 +139,9 @@ pub fn benchmark(tasks: usize) {
             else {
                 // during phase 2
                 backprint(
-                        format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; v = {cov:.2}%; \t",
+                        format!("{}. et = {}s; g = {}; s = {sv:.5} g/MS; t = {t}; v = {cov:.2}%; \t",
                             phase,
-                            elapsed_time / ns,
+                            elapsed_time / NS,
                             total_games,
                             sv=speed_v,
                             t = tests,
@@ -157,9 +154,9 @@ pub fn benchmark(tasks: usize) {
 
     }
 
+    // Rust requires the threads be manually ended, and the channels specifically closed.
+    let _ = stop_threads(threads, &mut phase, &mut terminate_senders, &mut termination_receivers);
 
-    let threads_stopped = stop_threads(tasks, &mut phase, &mut terminate_senders, &mut termination_receivers);
-    println!("\n{}. {} tasks stopped", phase, threads_stopped);
 
     // calculate final statistics
     let mean = get_mean(&samples);
@@ -178,17 +175,17 @@ pub fn benchmark(tasks: usize) {
 
     println!("\n---\n");
 
-    println!("Threads: {}", tasks);
+    println!("Threads: {}", threads);
     println!("Speed: {sv:.5}", sv = speed_v);
     println!("Total Games: {}", total_games);
-    println!("Elapsed Time: {} nanoseconds; {} seconds", elapsed_time, elapsed_time / ns);
+    println!("Elapsed Time: {} nanoseconds; {} seconds", elapsed_time, elapsed_time / NS);
 
     println!("\nScore: {}\n", f64::round(speed_v));
 }
 
-fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
+fn create_threads(threads: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
 
-    for i in 0..tasks {
+    for i in 0..threads {
 
         let (c_tx, c_rx): (Sender<u32>, Receiver<u32>) = channel();
         let (ts_tx, ts_rx): (Sender<u32>, Receiver<u32>) = channel();
@@ -222,7 +219,7 @@ fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver
     }
 }
 
-fn stop_threads(tasks: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>) -> usize {
+fn stop_threads(threads: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>) -> usize {
     for s in ts.iter() {
         let _ = s.send(1);
     }
@@ -235,7 +232,7 @@ fn stop_threads(tasks: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &m
             };
             end_collection = end_collection + rv;
         }
-        if end_collection == tasks {
+        if end_collection == threads {
             *phase = 3;
             break 'end;
         }
