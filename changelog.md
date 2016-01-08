@@ -12,6 +12,7 @@ v0.3.0 - ???
 - Changed the output stage.
 - Updated Rust (the compiler) from 1.1 to 1.5.
 - Updated packages from July to January.
+- Added `multiplier` cli argument.
 
 v0.2.0 - July 7th, 2015
 -------
