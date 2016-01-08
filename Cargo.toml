@@ -1,8 +1,8 @@
 [package]
 
-name = "wargame"
-version = "0.2.0"
-authors = ["Ryan Rampersad <ryan.rampersad@gmail.com"]
+name = "wargame-rust"
+version = "0.3.0"
+authors = ["Ryan Rampersad <ryan.rampersad@gmail.com>"]
 
 [dependencies]
 rand = "0.3"

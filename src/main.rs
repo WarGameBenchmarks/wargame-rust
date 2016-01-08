@@ -17,7 +17,7 @@ fn main() {
 	*/
 	let args: Vec<String> = env::args().collect();
 
-	let tasks:usize = match args.len() {
+	let threads:usize = match args.len() {
 		2 => match args[1].trim().parse() {
 			Ok(x) => x,
 			Err(_) => 1
@@ -25,7 +25,17 @@ fn main() {
 		_ => 1
 	};
 
-	println!("settings: tasks = {}", tasks);
+	let multiplier:f64 = match args.len() {
+		3 => match args[2].trim().parse() {
+			Ok(x) => x,
+			Err(_) => 1.00
+		},
+		_ => 1.00
+	};
 
-	benchmark::benchmark(tasks);
+	println!("WarGame Rust");
+
+	println!("settings: threads = {}; multiplier = {:.2}\n", threads, multiplier);
+
+	benchmark::benchmark(threads, multiplier.abs());
 }

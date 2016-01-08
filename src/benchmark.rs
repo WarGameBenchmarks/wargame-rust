@@ -1,5 +1,3 @@
-use std::f64;
-
 use time::precise_time_ns;
 
 use std::sync::mpsc::channel;
@@ -8,71 +6,70 @@ use std::sync::mpsc::Receiver;
 
 use std::thread;
 
+use std::io::{self, Write};
+
+use std::collections::HashMap;
+
 use rand;
 
 use wg;
 
-pub fn benchmark(tasks: usize) {
+const MS:u64 = 1000000;
+const NS:u64 = 1000000000;
 
+pub fn benchmark(threads: usize, multiplier: f64) {
+
+    // these are communication channels
     let mut terminate_senders = Vec::<Sender<u32>>::new(); // ts_
     let mut termination_receivers = Vec::<Receiver<u32>>::new(); // tr_
     let mut completion_receivers = Vec::<Receiver<u32>>::new(); // c_
 
     // create threads, and store channel pipes in the respective vectors
-    create_threads(tasks, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
+    create_threads(threads, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
 
-    // it is easier to keep data for calculations here
-    // otherwise they would need to passed by reference
-    // into the next function
+    // 1/10 of a second
+    const DISPLAY_FREQUENCY:u64 = NS/10;
 
-    // calculations
+    // 1/200 of a second
+    const SAMPLE_FREQUENCY:u64 = NS/200;
+
+    // 10 seconds
+    let mut prime_time:u64 = 10000000000;
+    // 50 seconds
+    let mut sample_time:u64 = 50000000000;
+
+    if multiplier != 1.00 {
+        prime_time = (prime_time as f64 * multiplier) as u64;
+        sample_time = (sample_time as f64 * multiplier) as u64;
+    }
+
+    let end_time:u64 = prime_time + sample_time;
+
+    let sample_size:u64 = sample_time / SAMPLE_FREQUENCY;
 
     // samples used for statistics calculations
-    let mut samples = Vec::with_capacity(10000);
+    let mut samples = Vec::with_capacity(sample_size as usize);
 
-    // phase of benchmark
-    let mut phase = 1u32;
+    let start_time:u64 = precise_time_ns();
+    let mut current_time:u64;
+    let mut elapsed_time:u64;
 
-    let mut total_games = 0u64;
-    let start_time = precise_time_ns();
-    let mut current_time;
-    let mut test_duration:f64;
+    let mut last_display_time:u64 = start_time;
+    let mut last_sample_time:u64 = start_time;
 
-    // 1 minute in nanoseconds
-    let prime_time = 60000000000;
-    let maximum_tests = 240u32;
+    let mut phase:u64 = 1;
 
-    let display_frequency = 50000000u64;
-    let sample_frequency =   5000000u64;
-
-    let mut last_display_time = 0u64;
-    let mut last_sample_time = 0u64;
-
-    let ms = 1000000u64;
-    let ns = 1000000000u64;
-
-    let mut tests = 0;
-
-    let mut elapsed_time;
-    let mut test_time = 0u64;
+    let mut total_games:u64 = 1;
 
     let mut speed:f64;
-    let mut speed_v:f64;
-    let mut rate:f64;
 
-    let mut test_started = false;
+    // min and max are forced to be
+    // zero here, but they are properly set to the
+    // initial speed sample value when phase 1 ends
+    let mut maximum_speed:f64 = 0.0;
+    let mut minimum_speed:f64 = 0.0;
 
-    let mut maximum_speed_v:f64 = 0f64;
-
-    let mut mean;
-    let mut stdev;
-    let mut cov = 0f64;
-
-    // the monitor loop collects the total game count
-    // and the elasped time so far
-    println!("\n{}. prime time has started", phase);
     'monitor: loop {
-
 
         total_games = total_games + get_games(&completion_receivers);
 
@@ -80,115 +77,157 @@ pub fn benchmark(tasks: usize) {
         current_time = precise_time_ns();
         elapsed_time = current_time - start_time;
 
+        speed = total_games as f64 / elapsed_time as f64;
 
-        // NANOSECONDS per GAME
-        rate = elapsed_time as f64 / total_games as f64;
-
-        // GAMES per NANOSECOND
-        speed = 1f64 / rate as f64;
-        speed_v = speed * ms as f64;
-
-        if maximum_speed_v < speed_v {
-            maximum_speed_v = speed_v;
-        }
-
-        if !test_started && elapsed_time >= prime_time {
-            // phase 1: priming phase
-            test_started = true;
-            println!("\n{}. prime time has has ended", phase);
+        if phase == 1 && elapsed_time >= prime_time {
             phase = 2;
-            println!("\n{}. stability testing has started", phase);
-        } else if test_started && elapsed_time >= test_time {
-            // phase 2: stability phase
-            // calculate statistics
-            mean = get_mean(&samples);
-            stdev = get_standard_deviation(&samples, mean);
-            cov = get_coefficient_of_variation(mean, stdev);
-            // cov is a ratio
-            // when cov <= 1, stdev is ~1% of the mean
-            if cov <= 1f64 || tests >= maximum_tests {
-                println!("\n{}. stability testing has ended", phase);
-                break 'monitor;
-            } else {
-                // each test has 1 second duration
-                test_duration = 1f64;
-                test_time = elapsed_time + (test_duration * ns as f64) as u64;
+            // proper setting of min/max
+            maximum_speed = speed;
+            minimum_speed = speed;
+        } else if phase == 2 {
+
+            if maximum_speed < speed {
+                maximum_speed = speed;
             }
-            tests = tests + 1;
+            if minimum_speed > speed {
+                minimum_speed = speed;
+            }
+
+            if elapsed_time >= end_time {
+                phase = 3;
+            }
+
+        } else if phase == 4 {
+            break 'monitor;
         }
 
-        // sample: save a sample of the current speed_v
-        if (current_time - last_sample_time) > sample_frequency {
+        if phase == 2 && (current_time - last_sample_time) > SAMPLE_FREQUENCY {
             last_sample_time = current_time;
-            samples.push(speed_v);
+            samples.push(speed);
         }
 
-        // display: update the display enough time has elapsed
-        if  (current_time - last_display_time) > display_frequency {
-
+        if (current_time - last_display_time) > DISPLAY_FREQUENCY {
             last_display_time = current_time;
 
             if phase == 1 {
-                // during phase 1
-                backprint(
-                        format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms;\t",
-                            phase,
-                            elapsed_time / ns,
-                            total_games,
-                            sv=speed_v
-                        )
-                    );
-            }
-            else {
-                // during phase 2
-                backprint(
-                        format!("{}. et = {}s; g = {}; s = {sv:.5} g/ms; t = {t}; v = {cov:.2}%; \t",
-                            phase,
-                            elapsed_time / ns,
-                            total_games,
-                            sv=speed_v,
-                            t = tests,
-                            cov = (1f64/cov)*100 as f64
-                        )
-                    );
-            }
+				print!("\r{}. priming | et = {}s; g = {}; s = {:.5} g/ms; \t",
+                phase, elapsed_time / NS, total_games, speed * MS as f64)
+			} else if phase == 2 {
+				print!("\r{}. sampling | et = {}s; g = {}; s = {:.5} g/ms; t = {}; \t",
+				phase, elapsed_time / NS, total_games, speed * MS as f64, samples.len())
+			} else if phase == 3 {
+				phase = 4;
+				// intentionally blank line
+				print!("\r{}. done                                                                 \t",
+				phase)
+			}
+
+            // rust is line buffered, so force output
+            io::stdout().flush().unwrap();
 
         }
 
     }
 
+    // Rust requires the threads be manually ended, and the channels specifically closed.
+    let _ = stop_threads(threads, &mut terminate_senders, &mut termination_receivers);
 
-    let threads_stopped = stop_threads(tasks, &mut phase, &mut terminate_senders, &mut termination_receivers);
-    println!("\n{}. {} tasks stopped", phase, threads_stopped);
+    // calculations
 
-    // calculate final statistics
-    let mean = get_mean(&samples);
-    let stdev = get_standard_deviation(&samples, mean);
-    let coefficient_of_variation = get_coefficient_of_variation(mean, stdev);
+    const T_SCORE:f64 = 3.291; // 99.9% t-score
+    const ONE_PERCENT:f64 = 0.01; // 1%
+    const TEN_PERCENT:f64 = 0.1; // 10%
+
+    let mean:f64 = get_mean(&samples);
+    let median:f64 = get_median(&samples);
+    let stdev:f64 = get_standard_deviation(&samples, mean);
+    let cov:f64 = get_coefficient_of_variation(mean, stdev);
+
+    let mean_median_delta:f64 = (median - mean).abs();
+    let mm_lower:f64 = median.min(mean);
+    let mm_upper:f64 = median.max(mean);
+
+    let min_max_delta:f64 = maximum_speed - minimum_speed;
+    let max_ten_percent:f64 = maximum_speed * TEN_PERCENT;
+
+    let one_sigma_lower:f64 = mean - stdev;
+    let one_sigma_upper:f64 = mean + stdev;
+    let one_sigma_delta:f64 = one_sigma_upper - one_sigma_lower;
+
+    let ci_lower:f64 = mean - (T_SCORE * (stdev / (samples.len() as f64).sqrt()));
+    let ci_upper:f64 = mean + (T_SCORE * (stdev / (samples.len() as f64).sqrt()));
+    let ci_delta:f64 = ci_upper - ci_lower;
+
+    let mut criteria = HashMap::new();
+
+    criteria.insert("1", mean_median_delta < stdev);
+    criteria.insert("2", min_max_delta < max_ten_percent);
+    criteria.insert("3", cov < ONE_PERCENT);
+    criteria.insert("4", one_sigma_lower < speed && speed < one_sigma_upper);
+    criteria.insert("5", ci_lower < speed && speed < ci_upper);
+
 
     // show results
     println!("\n---\n");
 
-    println!("Samples: {} collected", samples.len());
-    println!("Mean: {mean:.5}", mean = mean);
-    println!("Standard Deviation: {stdev:.5}", stdev = stdev);
-    println!("Coefficient of Variation: {cov:.5}", cov = coefficient_of_variation);
-    println!("Coefficient of Variation: {cov:.2}%", cov = ((1f64/cov)*100 as f64));
-    println!("Maximum Speed: {sv:.5}", sv = maximum_speed_v);
+    println!("Samples: {:9}", samples.len());
+    println!("Mean:\t {:9.5}", toms(mean));
+    println!("Median:\t {:9.5}", toms(median));
+    println!("S.D.:\t {:9.5}", toms(stdev));
+    println!("C.O.V.:\t {:9.5}", cov);
 
-    println!("\n---\n");
+    println!("---");
 
-    println!("Threads: {}", tasks);
-    println!("Speed: {sv:.5}", sv = speed_v);
-    println!("Total Games: {}", total_games);
-    println!("Elapsed Time: {} nanoseconds; {} seconds", elapsed_time, elapsed_time / ns);
+    println!("Min-Max:\t < {:9.5} - {:9.5} > Δ {:9.5}",
+        toms(minimum_speed),
+        toms(maximum_speed),
+        toms(min_max_delta)
+    );
 
-    println!("\nScore: {}\n", f64::round(speed_v));
+    println!("1-σ:\t\t < {:9.5} - {:9.5} > Δ {:9.5}",
+        toms(one_sigma_lower),
+        toms(one_sigma_upper),
+        toms(one_sigma_delta)
+    );
+
+    println!("μ-Median:\t < {:9.5} - {:9.5} > Δ {:9.5}",
+		toms(mm_lower),
+		toms(mm_upper),
+		toms(mean_median_delta)
+    );
+
+	println!("99.9%% CI:\t < {:9.5} - {:9.5} > Δ {:9.5}",
+		toms(ci_lower),
+		toms(ci_upper),
+		toms(ci_delta)
+    );
+
+    println!("---");
+
+    println!("Threads: {}", threads);
+	println!("Multiplier: {:.2}", multiplier);
+	println!("Speed: {:.5} g/ms", toms(speed));
+	println!("Games: {}", total_games);
+	println!("Duration: {:.1}s", (elapsed_time as f64 / NS as f64));
+
+	println!("---");
+
+	println!("Rank: ({}/{}) {}", rank_passes(&mut criteria), criteria.len(), rank_letter(&mut criteria));
+	println!("Rank Criteria: {}", rank_reason(&mut criteria));
+
+	println!("---");
+
+	println!("Score: {}", toms(speed).round());
+
 }
 
-fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
+fn toms(f: f64) -> f64 {
+    return f * MS as f64;
+}
 
-    for i in 0..tasks {
+fn create_threads(threads: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
+
+    for i in 0..threads {
 
         let (c_tx, c_rx): (Sender<u32>, Receiver<u32>) = channel();
         let (ts_tx, ts_rx): (Sender<u32>, Receiver<u32>) = channel();
@@ -199,9 +238,11 @@ fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver
         c.push(c_rx);
 
         thread::spawn(move || {
-            let task_id = i;
+            let thread_id = i;
             // tight loop
 
+            // make a random generator for this
+            // thread only and supply that to each game
             let mut rng = rand::thread_rng();
 
             loop {
@@ -217,12 +258,12 @@ fn create_threads(tasks: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver
                 }
             }
             // the termination success signal is sent
-            let _ = tr_tx.send(task_id as u32);
+            let _ = tr_tx.send(thread_id as u32);
         });
     }
 }
 
-fn stop_threads(tasks: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>) -> usize {
+fn stop_threads(threads: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>) -> usize {
     for s in ts.iter() {
         let _ = s.send(1);
     }
@@ -235,16 +276,11 @@ fn stop_threads(tasks: usize, phase: &mut u32, ts: &mut Vec<Sender<u32>>, tr: &m
             };
             end_collection = end_collection + rv;
         }
-        if end_collection == tasks {
-            *phase = 3;
+        if end_collection == threads {
             break 'end;
         }
     }
     return end_collection;
-}
-
-fn backprint(s: String) {
-    print!("\r{}", s);
 }
 
 fn get_games(crx: &[Receiver<u32>]) -> u64 {
@@ -259,8 +295,49 @@ fn get_games(crx: &[Receiver<u32>]) -> u64 {
     return total;
 }
 
+fn rank_passes(criteria: &mut HashMap<&str, bool>) -> usize {
+    let mut n:usize = 0;
+    for (_, &b) in criteria.iter() {
+        if b {
+            n = n + 1
+        }
+    }
+    return n;
+}
+
+fn rank_letter(criteria: &mut HashMap<&str, bool>) -> String {
+    let n:usize = rank_passes(criteria);
+    let str = match n {
+        5 => "A+",
+        4 => "A",
+        3 => "B",
+        2 => "C",
+        1 => "D",
+        _ => "F"
+    };
+    return str.to_string();
+}
+
+fn rank_reason(criteria: &mut HashMap<&str, bool>) -> String {
+    let reason;
+    let passes = rank_passes(criteria);
+    if passes == 0 {
+        reason = "none".to_string();
+    } else {
+        let mut ss = Vec::new();
+        for (&k, &v) in criteria.iter() {
+            if v {
+                ss.push(k.clone());
+            }
+        }
+        let joined = ss.join(" | ");
+        reason = joined.to_string();
+    }
+    return reason;
+}
+
 fn get_coefficient_of_variation(mean: f64, stdev: f64) -> f64 {
-    return (stdev / mean) * 100 as f64;
+    return stdev / mean;
 }
 
 fn get_standard_deviation(samples: &[f64], mean: f64) -> f64 {
@@ -268,8 +345,28 @@ fn get_standard_deviation(samples: &[f64], mean: f64) -> f64 {
     for s in samples.iter() {
         total_stdev = total_stdev + (s - mean).powi(2);
     }
-    let stdev = (total_stdev / samples.len() as f64).sqrt();
+    let stdev = (total_stdev / (samples.len() - 1) as f64).sqrt();
     return stdev;
+}
+
+fn get_median(samples: &[f64]) -> f64 {
+    let mut s = samples.to_vec();
+
+    // this is required because core::cmp::Ord is not
+    // implemented for f64, which means
+    // we need to sort by hand here.
+    s.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    let length:usize = s.len();
+    let median:f64;
+    if length % 2 == 0 {
+        let a = s[length / 2 - 1];
+        let b = s[length / 2 + 2];
+        median = (a+b)/2 as f64;
+    } else {
+        median = s[length / 2];
+    }
+    return median;
 }
 
 fn get_mean(samples: &[f64]) -> f64 {
