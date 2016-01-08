@@ -17,7 +17,7 @@ use wg;
 const MS:u64 = 1000000;
 const NS:u64 = 1000000000;
 
-pub fn benchmark(threads: usize) {
+pub fn benchmark(threads: usize, multiplier: f64) {
 
     // these are communication channels
     let mut terminate_senders = Vec::<Sender<u32>>::new(); // ts_
@@ -36,9 +36,12 @@ pub fn benchmark(threads: usize) {
     // 10 seconds
     let mut prime_time:u64 = 10000000000;
     // 50 seconds
-    let mut sample_time:u64 = 10000000000;
+    let mut sample_time:u64 = 50000000000;
 
-    // TODO: add multiplier support
+    if multiplier != 1.00 {
+        prime_time = (prime_time as f64 * multiplier) as u64;
+        sample_time = (sample_time as f64 * multiplier) as u64;
+    }
 
     let end_time:u64 = prime_time + sample_time;
 
@@ -107,10 +110,10 @@ pub fn benchmark(threads: usize) {
             last_display_time = current_time;
 
             if phase == 1 {
-				print!("\r{}. priming | et = {}s; g = {}; s = {} g/ms; \t",
+				print!("\r{}. priming | et = {}s; g = {}; s = {:.5} g/ms; \t",
                 phase, elapsed_time / NS, total_games, speed * MS as f64)
 			} else if phase == 2 {
-				print!("\r{}. sampling | et = {}s; g = {}; s = {} g/ms; t = {}; \t",
+				print!("\r{}. sampling | et = {}s; g = {}; s = {:.5} g/ms; t = {}; \t",
 				phase, elapsed_time / NS, total_games, speed * MS as f64, samples.len())
 			} else if phase == 3 {
 				phase = 4;
@@ -138,7 +141,7 @@ pub fn benchmark(threads: usize) {
     let mean:f64 = get_mean(&samples);
     let median:f64 = get_median(&samples);
     let stdev:f64 = get_standard_deviation(&samples, mean);
-    let cov:f64 = get_coefficient_of_variation(stdev, mean);
+    let cov:f64 = get_coefficient_of_variation(mean, stdev);
 
     let mean_median_delta:f64 = (median - mean).abs();
     let mm_lower:f64 = median.min(mean);
@@ -167,6 +170,59 @@ pub fn benchmark(threads: usize) {
     // show results
     println!("\n---\n");
 
+    println!("Samples: {:9}", samples.len());
+    println!("Mean:\t {:9.5}", toms(mean));
+    println!("Median:\t {:9.5}", toms(median));
+    println!("S.D.:\t {:9.5}", toms(stdev));
+    println!("C.O.V.:\t {:9.5}", cov);
+
+    println!("---");
+
+    println!("Min-Max:\t < {:9.5} - {:9.5} > Δ {:9.5}",
+        toms(minimum_speed),
+        toms(maximum_speed),
+        toms(min_max_delta)
+    );
+
+    println!("1-σ:\t\t < {:9.5} - {:9.5} > Δ {:9.5}",
+        toms(one_sigma_lower),
+        toms(one_sigma_upper),
+        toms(one_sigma_delta)
+    );
+
+    println!("μ-Median:\t < {:9.5} - {:9.5} > Δ {:9.5}",
+		toms(mm_lower),
+		toms(mm_upper),
+		toms(mean_median_delta)
+    );
+
+	println!("99.9%% CI:\t < {:9.5} - {:9.5} > Δ {:9.5}",
+		toms(ci_lower),
+		toms(ci_upper),
+		toms(ci_delta)
+    );
+
+    println!("---");
+
+    println!("Threads: {}", threads);
+	println!("Multiplier: {:.2}", multiplier);
+	println!("Speed: {:.5} g/ms", toms(speed));
+	println!("Games: {}", total_games);
+	println!("Duration: {:.1}s", (elapsed_time as f64 / NS as f64));
+
+	println!("---");
+
+	println!("Rank: ({}/{}) {}", rank_passes(&mut criteria), criteria.len(), rank_letter(&mut criteria));
+	println!("Rank Criteria: {}", rank_reason(&mut criteria));
+
+	println!("---");
+
+	println!("Score: {}", toms(speed).round());
+
+}
+
+fn toms(f: f64) -> f64 {
+    return f * MS as f64;
 }
 
 fn create_threads(threads: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
