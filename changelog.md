@@ -5,8 +5,8 @@ v0.3.0 - ???
 -------
 
 - Changed how *random numbers* are generated for the `shuffle` deck method. Instead of making a new generator for each shuffle, each thread now contains its own generator, and that is passed in to each game, and in turn, to each shuffle instance.
-- Added median.
-- Added ranks.
+- Added `get_median`.
+- Added `rank_letter`, `rank_passes`, `rank_reason`.
 - Changed majority of the testing section
   - Following WarGame Go system.
 - Changed the output stage.
