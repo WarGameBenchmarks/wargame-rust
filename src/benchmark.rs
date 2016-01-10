@@ -17,6 +17,37 @@ use wg;
 const MS:u64 = 1000000;
 const NS:u64 = 1000000000;
 
+fn prebench() -> usize {
+
+    let mut max_games = 0;
+    let mut n = 0;
+    let mut m = 100;
+    let duration:u64 = NS/100;
+
+    let mut rng = rand::thread_rng();
+
+    while n < m {
+
+        let start = precise_time_ns();
+        let mut elapsed_time = 0;
+        let mut games = 0;
+
+        while elapsed_time < duration {
+            wg::game(&mut rng);
+            games = games + 1;
+            elapsed_time = precise_time_ns() - start;
+        }
+
+        if max_games < games {
+            // println!("g {} {}", max_games, games);
+            max_games = games;
+        }
+        n = n + 1;
+    }
+
+    return max_games;
+}
+
 pub fn benchmark(threads: usize, multiplier: f64) {
 
     // these are communication channels
@@ -24,8 +55,10 @@ pub fn benchmark(threads: usize, multiplier: f64) {
     let mut termination_receivers = Vec::<Receiver<u32>>::new(); // tr_
     let mut completion_receivers = Vec::<Receiver<u32>>::new(); // c_
 
+    let base = prebench();
+
     // create threads, and store channel pipes in the respective vectors
-    create_threads(threads, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
+    create_threads(threads, base, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
 
     // 1/10 of a second
     const DISPLAY_FREQUENCY:u64 = NS/10;
@@ -207,6 +240,7 @@ pub fn benchmark(threads: usize, multiplier: f64) {
     println!("Threads: {}", threads);
 	println!("Multiplier: {:.2}", multiplier);
 	println!("Speed: {:.5} g/ms", toms(speed));
+	println!("Base: {}", base);
 	println!("Games: {}", total_games);
 	println!("Duration: {:.1}s", (elapsed_time as f64 / NS as f64));
 
@@ -225,7 +259,7 @@ fn toms(f: f64) -> f64 {
     return f * MS as f64;
 }
 
-fn create_threads(threads: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
+fn create_threads(threads: usize, base: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiver<u32>>, c: &mut Vec<Receiver<u32>>) {
 
     for i in 0..threads {
 
@@ -247,9 +281,13 @@ fn create_threads(threads: usize, ts: &mut Vec<Sender<u32>>, tr: &mut Vec<Receiv
 
             loop {
                 // the entire point of this: run the wargame
-                wg::game(&mut rng);
+
+                for _ in 0..base {
+                    wg::game(&mut rng);
+                }
+
                 // completion gets incremented
-                let _ = c_tx.send(1);
+                let _ = c_tx.send(base as u32);
                 // then the termination signal is checked, and if is available, loop is broken
                 let r = ts_rx.try_recv();
                 match r {
