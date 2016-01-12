@@ -13,7 +13,7 @@ There is a changelog detailing major changes between releases. See [changelog.md
 Legend
 ------
 
-You definitely should read the [legend](https://github.com/WarGameBenchmarks/wargame/blob/master/legend.md). to learn about the output.
+You definitely should read the [legend](https://github.com/WarGameBenchmarks/wargame/blob/master/legend.md) to learn about the output.
 
 How To
 ------
