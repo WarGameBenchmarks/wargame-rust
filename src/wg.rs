@@ -1,8 +1,9 @@
 use std::fmt;
-use rand;
 use rand::Rng;
+use rand::ThreadRng;
 use std::cmp::Ordering;
 
+/// Value represents the Value the card.
 #[derive(Clone, Copy)]
 enum Value {
 	Two,
@@ -20,6 +21,7 @@ enum Value {
 	Ace
 }
 
+/// Displays the Value as if they were a card.
 impl fmt::Display for Value {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		let name = match *self {
@@ -41,6 +43,11 @@ impl fmt::Display for Value {
 	}
 }
 
+/// The Suit represents the Suit of a card.
+///
+/// In *War*, there is no requirement to have cards with suits
+/// however this benefits debugging as each of the four variants
+/// of each card can be unique.
 #[derive(Clone, Copy)]
 enum Suit {
 	Clubs,
@@ -49,6 +56,7 @@ enum Suit {
 	Spades
 }
 
+// Displays Suits as if they were a card.
 impl fmt::Display for Suit {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		let name = match *self {
@@ -61,6 +69,9 @@ impl fmt::Display for Suit {
 	}
 }
 
+/// The Card struct represents something similar to a physical card.
+/// Each card should have a Value and Suit,
+/// although only Value is used to any effect.
 #[derive(Clone)]
 struct Card {
 	value: Value,
@@ -68,10 +79,22 @@ struct Card {
 }
 
 impl Card {
+
+	/// To make a new card, provide Value and Suit.
 	fn new(value: Value, suit: Suit) -> Card {
 		Card {value: value, suit: suit}
 	}
 
+	/// Get the value of a card in numeric form.
+	///
+	/// It is possible this could have been contain in the `enum Value`
+	/// however it also makes sense to offer this method here
+	/// as Rust offers Traits that can overload
+	/// the comparison operators, and this method will be
+	/// used extensively in that setting.
+	///
+	/// Notice that the literal values are used:
+	/// 2..14; 1 is skipped
 	fn get_value(&self) -> i32 {
 		let v:i32 = match self.value {
 			Value::Two => 2,
@@ -92,6 +115,10 @@ impl Card {
 	}
 }
 
+/// Displays a card.
+///
+/// The format is {} of {}. For example,
+/// Ace of Spades or Three of Hearts.
 impl fmt::Display for Card {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "{} of {}", self.value, self.suit)
@@ -125,14 +152,21 @@ impl Ord for Card {
 	}
 }
 
+/// Deck represents a formal collection of cards.
+///
+/// You can think about Deck's as wrappers for the Vec's of cards.
 #[derive(Clone)]
 struct Deck(Vec<Card>);
 
 impl Deck {
 
-	/*
-		Makes a fresh deck of 52 regular cards.
-	*/
+	// Makes a fresh deck of 52 regular cards.
+	//
+	// First, an empty Vec of cards is created,
+	// and then populated by one card value for each suit type.
+	//
+	// This is a **static** method.
+	// Notice: it does not reference `self`.
 	fn new_fresh_deck() -> Deck {
 
 		let mut cards:Vec<Card> = Vec::with_capacity(52);
@@ -150,11 +184,23 @@ impl Deck {
 		Deck(cards)
 	}
 
+	/// Get a new empty deck.
+	///
+	/// This allocates the space for the cards, but does not
+	/// fill the space.
+	///
+	/// This is a **static** method.
+	/// Notice: it does not reference `self`.
 	fn new() -> Deck {
 		let cards:Vec<Card> = Vec::with_capacity(52);
 		Deck(cards)
 	}
 
+	/// Splits a deck into two.
+	///
+	/// Instead of returning two new decks, only a single new deck is returned.
+	/// In this way, half the cards in kept in the first deck, and the other half is
+	/// returned anew.
 	fn split(&mut self) -> Deck {
 		let &mut Deck(ref mut cards) = self;
 		let length = cards.len();
@@ -174,36 +220,39 @@ impl Deck {
 		Deck(_cards)
 	}
 
-	fn shuffle(&mut self) {
+	/// Shuffle a deck of cards randomly.
+	///
+	/// Prior to 0.3.0, this used to create
+	/// a new ThreadRng generator everytime.
+	fn shuffle(&mut self, rng: &mut ThreadRng) {
 		let &mut Deck(ref mut cards) = self;
 
-		let mut rng = rand::thread_rng();
+		// previously, this used a fresh ThreadRng
+		// each call, but instead relies on a generator
+		// being passed
 		rng.shuffle(cards);
 
 	}
 
+	/// Get the length of the deck of cards.
 	fn length(&mut self) -> usize {
 		let &mut Deck(ref mut cards) = self;
-
 		return cards.len()
 	}
 
+	/// Returns if the deck has cards or not.
 	fn has_cards(&mut self) -> bool {
 		let &mut Deck(ref mut cards) = self;
 		cards.len() > 0
 	}
 
-	/*
-		Get the card at the top of the deck.
-	*/
+	/// Gets the card at the top of the deck.
 	fn get_card(&mut self) -> Card {
 		let &mut Deck(ref mut cards) = self;
 		cards[0].clone()
 	}
 
-	/*
-		Removes card from the top of this deck and gives the card to the given deck.
-	*/
+	/// Removes card from the top of this deck and gives the card to the given deck.
 	fn give_card(&mut self, deck: &mut Deck) -> () {
 		let &mut Deck(ref mut cards) = self;
 		let &mut Deck(ref mut cards2) = deck;
@@ -214,14 +263,13 @@ impl Deck {
 
 		let card = cards.remove(0);
 		cards2.push(card);
-
 	}
 
-	/*
-		Gives card from this deck to the given deck.
-	*/
+	/// Gives card from this deck to the given deck.
+	///
+	/// Prior to 0.3.0, this method had a bug.
+	/// It would call shuffle being providing the cards to the other deck.
 	fn give_cards(&mut self, deck: &mut Deck) -> () {
-		self.shuffle();
 		for _ in 0..self.length() {
 			self.give_card(deck);
 		}
@@ -229,6 +277,7 @@ impl Deck {
 
 }
 
+/// Displays a deck.
 impl fmt::Display for Deck {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		let &Deck(ref cards) = self;
@@ -247,11 +296,12 @@ impl fmt::Display for Deck {
 	}
 }
 
-pub fn game() {
+/// Play the game of War.
+pub fn game(rng: &mut ThreadRng) {
 
 	let mut player1 = Deck::new_fresh_deck();
 
-	player1.shuffle();
+	player1.shuffle(rng);
 
 	let mut player2 = player1.split();
 
@@ -305,9 +355,11 @@ pub fn game() {
 
 				if card1 < card2 {
 					info!(target: "game_events", "P1: `{}` < P2: `{}`; W {}", card1, card2, winner.length());
+					winner.shuffle(rng);
 					winner.give_cards(&mut player2);
 				} else if card1 > card2 {
 					info!(target: "game_events", "P1: `{}` > P2: `{}`; W {}", card1, card2, winner.length());
+					winner.shuffle(rng);
 					winner.give_cards(&mut player1);
 				} else {
 					// perform another war
@@ -322,16 +374,12 @@ pub fn game() {
 
 		} else if card1 < card2 {
 			info!(target: "game_events", "P1: `{}` < P2: `{}`; W {}", card1, card2, winner.length());
-			winner.shuffle();
-			for _ in 0..winner.length() {
-				winner.give_cards(&mut player2);
-			}
+			winner.shuffle(rng);
+			winner.give_cards(&mut player2);
 		} else if card1 > card2 {
 			info!(target: "game_events", "P1: `{}` > P2: `{}`; W {}", card1, card2, winner.length());
-			winner.shuffle();
-			for _ in 0..winner.length() {
-				winner.give_cards(&mut player1);
-			}
+			winner.shuffle(rng);
+			winner.give_cards(&mut player1);
 		}
 
 

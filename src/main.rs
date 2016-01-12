@@ -17,15 +17,36 @@ fn main() {
 	*/
 	let args: Vec<String> = env::args().collect();
 
-	let tasks:usize = match args.len() {
-		2 => match args[1].trim().parse() {
-			Ok(x) => x,
-			Err(_) => 1
+	let threads:usize;
+	let multiplier:f64;
+
+	let _ = match args.len() {
+		3 => {
+			threads = match args[1].trim().parse() {
+				Ok(x) => x,
+				Err(_) => 1
+			};
+			multiplier = match args[2].trim().parse() {
+				Ok(x) => x,
+				Err(_) => 1.00
+			};
 		},
-		_ => 1
+		2 => {
+			threads = match args[1].trim().parse() {
+				Ok(x) => x,
+				Err(_) => 1
+			};
+			multiplier = 1.00;
+		},
+		_ => {
+			threads = 1;
+			multiplier = 1.00;
+		}
 	};
 
-	println!("settings: tasks = {}", tasks);
+	println!("WarGame Rust");
 
-	benchmark::benchmark(tasks);
+	println!("settings: threads = {}; multiplier = {:.2}\n", threads, multiplier);
+
+	benchmark::benchmark(threads, multiplier.abs());
 }
