@@ -1,7 +1,7 @@
 Changelog
 =========
 
-v0.3.0 - ???
+v0.3.0 - January 11th, 2016
 -------
 
 - Changed how *random numbers* are generated for the `shuffle` deck method. Instead of making a new generator for each shuffle, each thread now contains its own generator, and that is passed in to each game, and in turn, to each shuffle instance.
