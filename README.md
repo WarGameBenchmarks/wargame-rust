@@ -10,6 +10,11 @@ Changelog
 
 There is a changelog detailing major changes between releases. See [changelog.md](changelog.md).
 
+Legend
+------
+
+You definitely should read the [legend](https://github.com/WarGameBenchmarks/wargame/blob/master/legend.md). to learn about the output.
+
 How To
 ------
 
@@ -37,37 +42,33 @@ Sample Output
 ------
 
 ```
-ryan@argon ~/Desktop/wargame-rust/wargame-rust
-$ cargo run --release 8
-     Running `target\release\wargame.exe 8`
+ryan@server2:~/Code/wargame-rust$ cargo run --release 4
+     Running `target/release/wargame-rust 4`
+WarGame Rust
+settings: threads = 4; multiplier = 1.00
 
-settings: tasks = 8
-
-1. prime time has started
-1. et = 59s; g = 6417097; s = 106.95935 g/ms;
-1. prime time has has ended
-
-2. stability testing has started
-2. et = 80s; g = 8576345; s = 107.07182 g/ms; t = 20; v = 99.72%;
-2. stability testing has ended
-
-3. 8 tasks stopped
-
+4. done                                                                 
 ---
 
-Samples: 13114 collected
-Mean: 106.88683
-Standard Deviation: 1.06521
-Coefficient of Variation: 0.99657
-Coefficient of Variation: 100.34%
-Maximum Speed: 107.86164
-
+Samples:      8368
+Mean:     43.89474
+Median:   43.92427
+S.D.:      0.12458
+C.O.V.:    0.00284
 ---
-
-Threads: 8
-Speed: 107.07158
-Total Games: 8576911
-Elapsed Time: 80104456039 nanoseconds; 80 seconds
-
-Score: 107
+Min-Max:         <  43.39707 -  44.02767 > Δ   0.63059
+1-σ:             <  43.77016 -  44.01932 > Δ   0.24917
+μ-Median:        <  43.89474 -  43.92427 > Δ   0.02953
+99.9%% CI:       <  43.89026 -  43.89922 > Δ   0.00896
+---
+Threads: 4
+Multiplier: 1.00
+Speed: 43.87283 g/ms
+Games: 2635292
+Duration: 60.1s
+---
+Rank: (4/5) A
+Rank Criteria: 1 | 2 | 4 | 3
+---
+Score: 44
 ```
