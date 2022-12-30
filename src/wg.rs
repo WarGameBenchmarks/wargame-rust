@@ -229,8 +229,7 @@ impl Deck {
 		// previously, this used a fresh ThreadRng
 		// each call, but instead relies on a generator
 		// being passed
-		rng.shuffle(cards);
-
+		cards.shuffle(rng);
 	}
 
 	/// Get the length of the deck of cards.
