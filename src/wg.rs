@@ -1,6 +1,5 @@
 use std::fmt;
-use rand::Rng;
-use rand::ThreadRng;
+use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::cmp::Ordering;
 
 /// Value represents the Value the card.
@@ -230,8 +229,7 @@ impl Deck {
 		// previously, this used a fresh ThreadRng
 		// each call, but instead relies on a generator
 		// being passed
-		rng.shuffle(cards);
-
+		cards.shuffle(rng);
 	}
 
 	/// Get the length of the deck of cards.
@@ -296,6 +294,7 @@ impl fmt::Display for Deck {
 	}
 }
 
+#[allow(unused_labels)]
 /// Play the game of War.
 pub fn game(rng: &mut ThreadRng) {
 

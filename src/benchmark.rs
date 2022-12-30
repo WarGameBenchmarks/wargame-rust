@@ -1,5 +1,3 @@
-use time::precise_time_ns;
-
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::sync::mpsc::Receiver;
@@ -12,10 +10,13 @@ use std::collections::HashMap;
 
 use rand;
 
+use std::time::Instant;
+
 use wg;
 
-const MS:u64 = 1000000;
-const NS:u64 = 1000000000;
+
+const MS:u128 = 1_000_000;
+const NS:u128 = 1_000_000_000;
 
 pub fn benchmark(threads: usize, multiplier: f64) {
 
@@ -28,34 +29,34 @@ pub fn benchmark(threads: usize, multiplier: f64) {
     create_threads(threads, &mut terminate_senders, &mut termination_receivers, &mut completion_receivers);
 
     // 1/10 of a second
-    const DISPLAY_FREQUENCY:u64 = NS/10;
+    const DISPLAY_FREQUENCY:u128 = NS/10;
 
     // 1/200 of a second
-    const SAMPLE_FREQUENCY:u64 = NS/200;
+    const SAMPLE_FREQUENCY:u128 = NS/200;
 
     // 10 seconds
-    let mut prime_time:u64 = 10000000000;
+    let mut prime_time:u128 = 10000000000;
     // 50 seconds
-    let mut sample_time:u64 = 50000000000;
+    let mut sample_time:u128 = 50000000000;
 
     if multiplier != 1.00 {
-        prime_time = (prime_time as f64 * multiplier) as u64;
-        sample_time = (sample_time as f64 * multiplier) as u64;
+        prime_time = (prime_time as f64 * multiplier) as u128;
+        sample_time = (sample_time as f64 * multiplier) as u128;
     }
 
-    let end_time:u64 = prime_time + sample_time;
+    let end_time:u128 = prime_time + sample_time;
 
-    let sample_size:u64 = sample_time / SAMPLE_FREQUENCY;
+    let sample_size:u128 = sample_time / SAMPLE_FREQUENCY;
 
     // samples used for statistics calculations
     let mut samples = Vec::with_capacity(sample_size as usize);
 
-    let start_time:u64 = precise_time_ns();
-    let mut current_time:u64;
-    let mut elapsed_time:u64;
+    let start_time:Instant = Instant::now();
+    let mut current_time:Instant;
+    let mut elapsed_time:u128;
 
-    let mut last_display_time:u64 = start_time;
-    let mut last_sample_time:u64 = start_time;
+    let mut last_display_time:Instant = start_time;
+    let mut last_sample_time:Instant = start_time;
 
     let mut phase:u64 = 1;
 
@@ -74,8 +75,8 @@ pub fn benchmark(threads: usize, multiplier: f64) {
         total_games = total_games + get_games(&completion_receivers);
 
         // time calculations
-        current_time = precise_time_ns();
-        elapsed_time = current_time - start_time;
+        current_time = Instant::now();
+        elapsed_time = current_time.duration_since(start_time).as_nanos();
 
         speed = total_games as f64 / elapsed_time as f64;
 
@@ -101,12 +102,12 @@ pub fn benchmark(threads: usize, multiplier: f64) {
             break 'monitor;
         }
 
-        if phase == 2 && (current_time - last_sample_time) > SAMPLE_FREQUENCY {
+        if phase == 2 && (current_time.duration_since(last_sample_time).as_nanos()) > SAMPLE_FREQUENCY {
             last_sample_time = current_time;
             samples.push(speed);
         }
 
-        if (current_time - last_display_time) > DISPLAY_FREQUENCY {
+        if (current_time.duration_since(last_display_time).as_nanos()) > DISPLAY_FREQUENCY {
             last_display_time = current_time;
 
             if phase == 1 {

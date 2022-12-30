@@ -5,7 +5,7 @@ version = "0.3.0"
 authors = ["Ryan Rampersad <ryan.rampersad@gmail.com>"]
 
 [dependencies]
-rand = "0.3"
-log = "0.3"
-env_logger = "*"
-time = "0.1"
+rand = "0.8.5"
+log = "0.4.17"
+env_logger = "0.10.0"
+time = "0.3.17"
