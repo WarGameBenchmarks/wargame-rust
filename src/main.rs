@@ -10,7 +10,7 @@ pub mod benchmark;
 use std::env;
 
 fn main() {
-	env_logger::init().unwrap();
+	env_logger::init();
 
 	/*
 		Grab the optional cli argument.
