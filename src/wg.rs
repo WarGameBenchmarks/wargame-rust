@@ -1,6 +1,5 @@
 use std::fmt;
-use rand::Rng;
-use rand::ThreadRng;
+use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::cmp::Ordering;
 
 /// Value represents the Value the card.
