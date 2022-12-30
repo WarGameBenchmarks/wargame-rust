@@ -294,6 +294,7 @@ impl fmt::Display for Deck {
 	}
 }
 
+#[allow(unused_labels)]
 /// Play the game of War.
 pub fn game(rng: &mut ThreadRng) {
 
